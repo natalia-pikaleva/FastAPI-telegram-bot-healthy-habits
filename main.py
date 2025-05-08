@@ -1,38 +1,39 @@
+import bot.handlers
+import threading
 from bot.setup import bot
+from bot.utils import set_default_commands
 from database.db_init import start_bd
-import logging
+from auth.router import router as auth_router
 from fastapi import FastAPI
+from config import setup_logging
+import logging
 
+setup_logging()
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.DEBUG)
-
-formatter = logging.Formatter("%(asctime)s - %(name)s - " "%(levelname)s - %(message)s")
-console_handler.setFormatter(formatter)
-
-logger.addHandler(console_handler)
 
 app = FastAPI()
+app.include_router(auth_router, prefix="/auth", tags=["auth"])
 
 
-#
-# import handlers
-# from utils.set_bot_commands import set_default_commands
-@app.get("/")
-async def root():
-    return {"message": "Hello World"}
+def start_bot():
+    logger.info("Starting Telegram bot polling")
+    set_default_commands(bot)
+    bot.infinity_polling(none_stop=True)
+
 
 @app.on_event("startup")
-async def startup_event():
+def startup_event():
     """
-    Start BD
+    Запускаем бота и базу данных
     """
     try:
-        logger.debug("Start sratup_event function")
-        # set_default_commands(bot)
-        # bot.infinity_polling(none_stop=True)
-        await start_bd()
+        logger.debug("Start startup_event function")
+        # Запускаем инициализацию базы и ждём её окончания
+        db_thread = threading.Thread(target=start_bd)
+        db_thread.start()
+        db_thread.join()
+
+        # Запускаем бота в отдельном демоне
+        threading.Thread(target=start_bot, daemon=True).start()
     except Exception as e:
         logger.error(f"Error during function startup_event: {e}")

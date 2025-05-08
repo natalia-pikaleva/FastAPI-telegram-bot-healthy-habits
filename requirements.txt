@@ -1,6 +1,8 @@
-asyncpg==0.30.0
+alembic==1.15.2
 bcrypt==4.3.0
 fastapi==0.115.12
+psycopg2==2.9.10
+PyJWT==2.10.1
 pyTelegrambotAPI==4.27.0
 python-dotenv==1.1.0
 SQLAlchemy==2.0.40

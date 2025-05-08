@@ -1,149 +1,130 @@
-import asyncio
-import csv
-import json
-import logging
-import os
-from os import getenv
-from dotenv import load_dotenv
-from typing import AsyncGenerator, List
+import psycopg2
+from psycopg2 import OperationalError
 
-import asyncpg
-from sqlalchemy import select
-from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy.exc import OperationalError, SQLAlchemyError
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine
+from config import DB_USER, DB_PASSWORD, DB_NAME, DB_HOST, setup_logging
+import logging
 
-# from main.models import Base, LikeTweet, Media, SubscribedUser, Tweet, User
-from .models import Base, User
-
-load_dotenv()
-
-DB_USER = getenv(
-    "DB_USER",
-)
-
-DB_PASSWORD = getenv(
-    "DB_PASSWORD",
-)
-
-DB_NAME = getenv(
-    "DB_NAME",
-)
-
-DB_HOST = "localhost"
-
-SQLALCHEMY_DATABASE_URI = (
-    f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:5432/{DB_NAME}"
-)
-
-# engine = create_async_engine(SQLALCHEMY_DATABASE_URI, echo=True)
-engine = create_async_engine(SQLALCHEMY_DATABASE_URI)
-
-AsyncSessionLocal = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
-
+setup_logging()
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.DEBUG)
+SQLALCHEMY_DATABASE_URI = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:5432/{DB_NAME}"
 
-formatter = logging.Formatter("%(asctime)s - %(name)s - " "%(levelname)s - %(message)s")
-console_handler.setFormatter(formatter)
+engine = create_engine(SQLALCHEMY_DATABASE_URI, echo=True)
 
-logger.addHandler(console_handler)
+SessionLocal = sessionmaker(bind=engine)
 
 
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    """Получение асинхронной сессии с базой данных"""
-    async with AsyncSessionLocal() as session:
-        yield session
+def get_db():
+    with SessionLocal() as db:
+        return db
 
 
-async def check_db_exists(db_url: str) -> bool:
-    """Проверка существования БД через asyncpg"""
+def check_db_exists(db_url: str) -> bool:
+    """Проверка существования БД через psycopg2 (синхронно)"""
+    db_name = db_url.split("/")[-1]
     try:
-        conn = await asyncpg.connect(
+        # Подключаемся к системной базе 'postgres'
+        conn = psycopg2.connect(
             user=DB_USER,
             password=DB_PASSWORD,
             host=DB_HOST,
-            database=db_url.split("/")[-1],
+            database="postgres",
         )
-        await conn.close()
-        return True
-    except asyncpg.InvalidCatalogNameError:
+        conn.autocommit = True
+        cur = conn.cursor()
+
+        # Проверяем, существует ли база данных
+        cur.execute("SELECT 1 FROM pg_database WHERE datname = %s", (db_name,))
+        exists = cur.fetchone() is not None
+
+        cur.close()
+        conn.close()
+
+        return exists
+
+    except OperationalError as e:
+        logger.error(f"Operational error checking database existence: {e}")
         return False
     except Exception as e:
         logger.error(f"Error checking database existence: {e}")
         return False
 
 
-async def create_database() -> bool:
-    """Создание БД с помощью asyncpg"""
+def create_database() -> bool:
+    """Создание БД"""
     try:
-        conn = await asyncpg.connect(
+        # Подключаемся к системной базе 'postgres'
+        conn = psycopg2.connect(
             user=DB_USER,
             password=DB_PASSWORD,
             host=DB_HOST,
             database="postgres",
         )
-        await conn.execute(f"CREATE DATABASE {DB_NAME}")
-        await conn.close()
+        conn.autocommit = True
+        cur = conn.cursor()
+        cur.execute(f'CREATE DATABASE "{DB_NAME}"')
+        conn.close()
         logger.info(f"Database {DB_NAME} created successfully")
         return True
-    except asyncpg.exceptions.DuplicateDatabaseError:
-        logger.warning(f"Database {DB_NAME} already exists")
-        return True
+    except OperationalError as e:
+        logger.error(f"Operational error create database: {e}")
+        return False
     except Exception as e:
-        logger.error(f"Error creating database: {e}")
+        logger.error(f"Error create database: {e}")
         return False
 
 
-async def drop_database() -> None:
+def drop_database() -> None:
     """
     Удаление базы данных.
     """
     try:
-        conn = await asyncpg.connect(
-            host=DB_HOST, port=5432, user=DB_USER, password=DB_PASSWORD
+        conn = psycopg2.connect(
+            host=DB_HOST,
+            port=5432,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database="postgres"
         )
-        await conn.execute(f"DROP DATABASE IF EXISTS {DB_NAME};")
-        await conn.close()
+        conn.autocommit = True
+        cur = conn.cursor()
+        cur.execute(f'DROP DATABASE IF EXISTS "{DB_NAME}";')
+        conn.close()
         logger.info(f"Database {DB_NAME} dropped successfully")
-    except asyncpg.exceptions.DatabaseError as e:
-        logger.error(f"Failed to drop database: {e}")
+    except OperationalError as e:
+        logger.error(f"Operational error drop database: {e}")
+        return False
+    except Exception as e:
+        logger.error(f"Error drop database: {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
 
 
-async def start_bd() -> None:
+def start_bd() -> None:
     """
     Создание базы данных при старте
     """
     try:
-        # await drop_database()
-        # await asyncio.sleep(1)
+        # drop_database()
 
-        if not await check_db_exists(SQLALCHEMY_DATABASE_URI):
+        if not check_db_exists(SQLALCHEMY_DATABASE_URI):
             logger.info("Database does not exist. Creating...")
-
-            if not await create_database():
+            if not create_database():
                 logger.error("Failed to create database. Exiting.")
                 return
-            await asyncio.sleep(1)
 
-            global engine, AsyncSessionLocal
-            engine = create_async_engine(SQLALCHEMY_DATABASE_URI, echo=True)
-            AsyncSessionLocal = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+        global engine, SessionLocal
+        engine = create_engine(SQLALCHEMY_DATABASE_URI, echo=True)  # синхронный движок
+        SessionLocal = sessionmaker(bind=engine)
 
-            async with engine.begin() as conn:
-                await conn.run_sync(Base.metadata.drop_all)
-                await conn.run_sync(Base.metadata.create_all)
-            logger.info("Tables created successfully")
-
-        async with AsyncSessionLocal() as session:
-            result = await session.execute(select(User))
-            users = result.scalars().all()
-
-        await engine.dispose()
+        # Base.metadata.create_all(engine)  # создаём таблицы
+        #
+        # logger.info("Tables created successfully")
 
     except OperationalError as e:
         logger.error(f"Operational error during database setup: {e}")
