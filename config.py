@@ -28,7 +28,7 @@ LOGGING_CONFIG = {
     "disable_existing_loggers": False,
     "formatters": {
         "default": {
-            "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            "format": "%(asctime)s - [%(name)s] - %(levelname)s - %(message)s",
         },
     },
     "handlers": {

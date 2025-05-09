@@ -4,6 +4,7 @@ from bot.setup import bot
 from bot.utils import set_default_commands
 from database.db_init import start_bd
 from auth.router import router as auth_router
+from habits.router import router as habits_router
 from fastapi import FastAPI
 from config import setup_logging
 import logging
@@ -13,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
+app.include_router(habits_router, prefix="/habits", tags=["habit"])
 
 
 def start_bot():

@@ -1,4 +1,5 @@
 from database.db_init import get_db
+from database.db_utils import save_token_for_user
 from database.models import User, UserToken
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -9,6 +10,7 @@ from config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 from config import setup_logging
 import logging
 from sqlalchemy.exc import SQLAlchemyError
+import jwt
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -43,12 +45,9 @@ def auth(auth_req: AuthRequest, db: Session = Depends(get_db)):
         expires_minutes=ACCESS_TOKEN_EXPIRE_MINUTES
     )
     logger.debug("Created token")
-    try:
-        user_token = UserToken(user_id=user.id, token=access_token)
-        db.add(user_token)
-        db.commit()
-    except SQLAlchemyError as e:
-        db.rollback()
-        logger.error(f"Error saving token: {e}")
+    payload = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
+    logger.debug(f"Decoded payload: {payload}")
+
+    save_token_for_user(db, user, access_token)
 
     return {"access_token": access_token, "token_type": "bearer"}

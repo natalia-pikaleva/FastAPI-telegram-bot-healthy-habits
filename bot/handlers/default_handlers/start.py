@@ -5,7 +5,7 @@ from ...setup import bot
 from database.db_init import SessionLocal
 from database.db_utils import get_user_by_chat_id
 import requests
-from bot.keyboards.reply.core import create_menu, auth_menu
+from bot.keyboards.reply.core import create_menu
 from config import setup_logging, API_HOST
 import logging
 

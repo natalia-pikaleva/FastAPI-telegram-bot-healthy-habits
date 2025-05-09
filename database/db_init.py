@@ -18,8 +18,11 @@ SessionLocal = sessionmaker(bind=engine)
 
 
 def get_db():
-    with SessionLocal() as db:
-        return db
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 def check_db_exists(db_url: str) -> bool:
