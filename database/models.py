@@ -1,5 +1,5 @@
 import bcrypt
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, ForeignKey, Date
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
@@ -33,7 +33,7 @@ class Habit(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     title = Column(String(200), index=True)
     repeat_period = Column(String(100), index=True)
-    start_at = Column(DateTime, index=True)
+    start_at = Column(Date, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
 
     user = relationship("User", back_populates="habits", lazy="selectin")

@@ -5,7 +5,7 @@ from ...setup import bot
 from database.db_init import SessionLocal
 from database.db_utils import get_user_by_chat_id
 import requests
-from bot.keyboards.reply.core import create_menu
+from bot.keyboards.reply.core import habits_commands
 from config import setup_logging, API_HOST
 import logging
 
@@ -32,4 +32,4 @@ def bot_start(message: Message) -> None:
             else:
                 bot.send_message(chat_id=message.chat.id, text="Ошибка аутентификации. Попробуйте позже.")
         else:
-            bot.send_message(chat_id=message.chat.id, text="Выберите команду:", reply_markup=create_menu())
+            bot.send_message(chat_id=message.chat.id, text="Прекрасный день, чтобы начать формировать новую привычку! Нажми Создать новую привычку или выбери привычку из ранее созданного списка", reply_markup=habits_commands())

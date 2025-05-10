@@ -12,7 +12,8 @@ logger = logging.getLogger(__name__)
 
 SQLALCHEMY_DATABASE_URI = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:5432/{DB_NAME}"
 
-engine = create_engine(SQLALCHEMY_DATABASE_URI, echo=True)
+# engine = create_engine(SQLALCHEMY_DATABASE_URI, echo=True)
+engine = create_engine(SQLALCHEMY_DATABASE_URI)
 
 SessionLocal = sessionmaker(bind=engine)
 

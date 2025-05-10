@@ -1,20 +1,17 @@
 from telebot.types import Message
 from ...keyboards.inline.core import habit_list_inline
-from ...keyboards.reply.core import habits_commands
 from ...setup import bot
 from database.db_init import SessionLocal
 from database.db_utils import get_token_for_user
 import requests
 from config import setup_logging, API_HOST
 import logging
-from collections import defaultdict
 
 setup_logging()
 logger = logging.getLogger(__name__)
 
-user_selected_habit = defaultdict(dict)
 
-
+@bot.message_handler(commands=["habits_list"])
 @bot.message_handler(func=lambda message: message.text == "Список всех привычек")
 def bot_get_habits(message: Message) -> None:
     """
@@ -52,18 +49,3 @@ def bot_get_habits(message: Message) -> None:
         bot.send_message(message.chat.id, "Список ваших привычек:", reply_markup=habit_list_inline(data))
     else:
         bot.send_message(message.chat.id, "Ошибка при выполнении запроса.")
-
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith('habit_'))
-def handle_habit_callback(call):
-    habit_id = int(call.data.split('_')[1])
-    # TODO проверить, есть ли в словаре другие сохраненные id привычек у данного пользователя, удалить их
-    global user_selected_habit
-    user_selected_habit[call.from_user.id]["habit_id"] = habit_id
-
-    bot.answer_callback_query(call.id)
-    bot.send_message(
-        call.message.chat.id,
-        f"Вы выбрали привычку с id {habit_id}. Что хотите сделать?",
-        reply_markup=habits_commands()
-    )
