@@ -3,7 +3,7 @@ from database.db_utils import get_habit_by_id
 from database.models import User, UserToken, Habit
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from .schemas import HabitResponse, HabitCreateRequest
+from .schemas import HabitResponse, HabitCreateRequest, HabitUpdateRequest
 from auth.utils import create_access_token
 from fastapi import Depends, APIRouter, status
 from config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
@@ -39,23 +39,26 @@ def create_habit(
     return {"message": "Habit created", "habit_id": new_habit.id}
 
 
-@router.post("/{habit_id}/update", status_code=status.HTTP_200_OK)
+@router.post("/{habit_id}/update", response_model=HabitResponse)
 def update_habit(
-        habit: HabitCreateRequest,
+        habit: HabitUpdateRequest,
         habit_id: int,
-        current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user),
 
 ):
     logger.debug("Start update_habit")
-    db_habit = get_habit_by_id(db, habit_id)
-    db_habit.title = habit.title
-    db_habit.repeat_period = habit.repeat_period
-    db_habit.start_at = habit.start_at
+    db_habit = db.query(Habit).filter(Habit.id == habit_id).scalar()
+    if habit.title:
+        db_habit.title = habit.title
+    if habit.repeat_period:
+        db_habit.repeat_period = habit.repeat_period
+    if habit.start_at:
+        db_habit.start_at = habit.start_at
 
     db.commit()
     db.refresh(db_habit)
-    return {"message": "Habit updated", "habit_id": db_habit.id}
+    return db_habit
 
 
 @router.delete("/{habit_id}/delete", status_code=status.HTTP_200_OK)
@@ -66,11 +69,21 @@ def delete_habit(
 
 ):
     logger.debug("Start delete_habit")
-    habit = get_habit_by_id(db, habit_id)
+    habit = db.query(Habit).filter(Habit.id == habit_id).scalar()
     db.delete(habit)
     db.commit()
 
     return {"message": "Habit deleted"}
+
+
+@router.get("/{habit_id}", response_model=HabitResponse)
+def get_habit(
+        habit_id: int,
+        db: Session = Depends(get_db),
+        current_user: Any = Depends(get_current_user),
+):
+    habit = db.query(Habit).filter(Habit.id == habit_id).scalar()
+    return habit
 
 
 @router.get("", response_model=List[HabitResponse])
