@@ -8,7 +8,7 @@ from sqlalchemy.orm import selectinload, Session
 from config import setup_logging
 from sqlalchemy.exc import SQLAlchemyError
 
-from .models import Base, User, UserToken
+from .models import Base, User, UserToken, Habit
 import logging
 
 setup_logging()
@@ -49,6 +49,7 @@ def get_token_for_user(db: Session, chat_id: int):
 
 
 def save_token_for_user(db: Session, user: User, access_token):
+    """Сохранение токена пользователя"""
     try:
         user_token = UserToken(user_id=user.id, token=access_token)
         db.add(user_token)
@@ -56,3 +57,12 @@ def save_token_for_user(db: Session, user: User, access_token):
     except SQLAlchemyError as e:
         db.rollback()
         logger.error(f"Error saving token: {e}")
+
+
+def get_habit_by_id(db: Session, habit_id: int) -> Habit:
+    """Получение привычки по ее id"""
+    logger.debug("start get_habit_by_id")
+    habit = (db.execute(select(Habit)
+                        .where(Habit.id == habit_id))).scalar()
+
+    return habit

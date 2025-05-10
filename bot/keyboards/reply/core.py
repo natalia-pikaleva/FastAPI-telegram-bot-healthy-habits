@@ -21,3 +21,17 @@ def create_menu():
     markup.add(btn6)
 
     return markup
+
+def habits_commands():
+    """
+    Функция реализует меню со списком команд для изменения или удаления привычки
+    """
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    btn = types.KeyboardButton("Изменить привычку")
+    markup.add(btn)
+    btn = types.KeyboardButton("Удалить привычку")
+    markup.add(btn)
+    btn = types.KeyboardButton("Список всех привычек")
+    markup.add(btn)
+
+    return markup
