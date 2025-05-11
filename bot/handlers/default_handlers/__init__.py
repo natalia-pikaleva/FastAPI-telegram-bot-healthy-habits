@@ -6,3 +6,4 @@ from . import update_habit
 from . import delete_habit
 from . import help
 from . import calendar
+from . import set_repeat_period

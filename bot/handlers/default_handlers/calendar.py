@@ -29,6 +29,7 @@ def calendar_callback(call):
     chat_id = call.from_user.id
     if action == 'DAY':
         bot.send_message(call.from_user.id, f"Вы выбрали дату: {date.strftime('%d.%m.%Y')} - {date}")
+
         if user_data[call.from_user.id]["action"] == "create":
             logger.debug("Action is create")
 
