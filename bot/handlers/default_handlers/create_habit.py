@@ -7,6 +7,7 @@ import logging
 from telebot_calendar import Calendar, CallbackData, RUSSIAN_LANGUAGE
 import datetime
 from collections import defaultdict
+from ...keyboards.inline.core import set_repeat_period_inline
 
 calendar = Calendar(language=RUSSIAN_LANGUAGE)
 calendar_1 = CallbackData('calendar_1', 'action', 'year', 'month', 'day')
@@ -29,7 +30,10 @@ def bot_create_habit(message: Message) -> None:
     if not token:
         bot.send_message(message.chat.id, "Пожалуйста, авторизуйтесь через /start")
         return
-    user_data[message.chat.id] = {'action': "create"}
+    if not 'action' in user_data[message.chat.id]:
+        user_data[message.chat.id] = {'action': "create"}
+    else:
+        user_data[message.chat.id]['action'] = "create"
     bot.send_message(message.chat.id, "Введите название привычки:")
     bot.register_next_step_handler(message, process_name_step)
 
@@ -37,13 +41,4 @@ def bot_create_habit(message: Message) -> None:
 def process_name_step(message):
     chat_id = message.chat.id
     user_data[chat_id]['title'] = message.text
-    bot.send_message(chat_id, "Введите периодичность (например, daily, weekly):")
-    bot.register_next_step_handler(message, process_repeat_period_step)
-
-
-def process_repeat_period_step(message):
-    chat_id = message.chat.id
-    user_data[chat_id]['repeat_period'] = message.text
-    now = datetime.datetime.now()
-    markup = calendar.create_calendar(name=calendar_1.prefix, year=now.year, month=now.month)
-    bot.send_message(message.chat.id, "Выберите дату:", reply_markup=markup)
+    bot.send_message(chat_id, "Выберите периодичность", reply_markup=set_repeat_period_inline())

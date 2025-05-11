@@ -35,6 +35,19 @@ def habit_fields_inline(data):
     markup.add(btn)
     return markup
 
+def set_repeat_period_inline():
+    markup = types.InlineKeyboardMarkup(row_width=1)
+    btn1 = types.InlineKeyboardButton(
+        text="Ежедневно",
+        callback_data="daily"
+    )
+    btn2 = types.InlineKeyboardButton(
+        text="Еженедельно",
+        callback_data="weekly"
+    )
+
+    markup.add(btn1, btn2)
+    return markup
 #
 # def habit_update_fields_inline(selected_fields: set):
 #     markup = types.InlineKeyboardMarkup(row_width=1)
