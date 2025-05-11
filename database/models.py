@@ -1,5 +1,5 @@
 import bcrypt
-from sqlalchemy import Column, Integer, String, ForeignKey, Date, UniqueConstraint
+from sqlalchemy import Column, Integer, String, ForeignKey, Date, UniqueConstraint, Time
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
@@ -14,8 +14,16 @@ class User(Base):
     first_name = Column(String(100), index=True)
     last_name = Column(String(100), index=True)
 
-    habits = relationship("Habit", back_populates="user", lazy="selectin")
-    tokens = relationship("UserToken", back_populates="user", lazy="selectin")
+    habits = relationship(
+        "Habit",
+        back_populates="user",
+        lazy="selectin",
+        cascade="all, delete-orphan")
+    tokens = relationship(
+        "UserToken",
+        back_populates="user",
+        lazy="selectin",
+        cascade="all, delete-orphan")
 
 
 class UserToken(Base):
@@ -37,7 +45,11 @@ class Habit(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
 
     user = relationship("User", back_populates="habits", lazy="selectin")
-    dates = relationship("HabitTracker", back_populates="habit", lazy="selectin")
+    dates = relationship(
+        "HabitTracker",
+        back_populates="habit",
+        lazy="selectin",
+        cascade="all, delete-orphan")
 
 
 class HabitTracker(Base):
@@ -52,3 +64,12 @@ class HabitTracker(Base):
     __table_args__ = (
         UniqueConstraint('habit_id', 'date_mark', name='uq_habit_date'),
     )
+
+
+class Reminder(Base):
+    __tablename__ = "reminders"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    time = Column(Time)
+    timezone = Column(String(50))
+    chat_id = Column(Integer)

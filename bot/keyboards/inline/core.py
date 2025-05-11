@@ -58,28 +58,28 @@ def set_repeat_period_inline():
 
     markup.add(btn1, btn2)
     return markup
-#
-# def habit_update_fields_inline(selected_fields: set):
-#     markup = types.InlineKeyboardMarkup(row_width=1)
-#
-#     def btn_text(field_name, display_text):
-#         return f"✅ {display_text}" if field_name in selected_fields else display_text
-#
-#     btn1 = types.InlineKeyboardButton(
-#         text=btn_text("title", "Название привычки"),
-#         callback_data="title"
-#     )
-#     btn2 = types.InlineKeyboardButton(
-#         text=btn_text("repeat_period", "Периодичность"),
-#         callback_data="repeat_period"
-#     )
-#     btn3 = types.InlineKeyboardButton(
-#         text=btn_text("start_at", "Дата начала"),
-#         callback_data="start_at"
-#     )
-#     btn4 = types.InlineKeyboardButton(
-#         text="Далее",
-#         callback_data="submit_update"
-#     )
-#     markup.add(btn1, btn2, btn3, btn4)
-#     return markup
+
+def hours_inline():
+    markup = types.InlineKeyboardMarkup(row_width=4)
+    buttons = []
+    for hour in range(24):
+        btn = types.InlineKeyboardButton(
+            text=f"{hour:02d}:00",
+            callback_data=f"hour_{hour}"
+        )
+        buttons.append(btn)
+    markup.add(*buttons)
+    return markup
+
+def timezone_inline():
+    markup = types.InlineKeyboardMarkup(row_width=4)
+    buttons = []
+
+    for zone in range(13):
+        btn = types.InlineKeyboardButton(
+            text=f"UTC+{zone}",
+            callback_data=f"timezone_-_{zone}"
+        )
+        buttons.append(btn)
+    markup.add(*buttons)
+    return markup

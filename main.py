@@ -8,6 +8,7 @@ from habits.router import router as habits_router
 from fastapi import FastAPI
 from config import setup_logging
 import logging
+from scheduler import start_scheduler
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -30,6 +31,10 @@ def startup_event():
     """
     try:
         logger.debug("Start startup_event function")
+
+        # Запуск планировщика
+        start_scheduler()
+
         # Запускаем инициализацию базы и ждём её окончания
         db_thread = threading.Thread(target=start_bd)
         db_thread.start()
