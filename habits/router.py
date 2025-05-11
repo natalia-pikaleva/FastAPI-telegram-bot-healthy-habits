@@ -1,6 +1,6 @@
 from database.db_init import get_db
 from database.db_utils import get_habit_by_id
-from database.models import User, UserToken, Habit
+from database.models import User, UserToken, Habit, HabitTracker
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from .schemas import HabitResponse, HabitCreateRequest, HabitUpdateRequest
@@ -13,6 +13,7 @@ from sqlalchemy.exc import SQLAlchemyError
 import json
 from typing import List, Any, Annotated
 from auth.utils import get_current_user
+from datetime import date
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -20,7 +21,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.post("/create", status_code=status.HTTP_201_CREATED)
+@router.post("/create", status_code=HabitResponse)
 def create_habit(
         habit: HabitCreateRequest,
         current_user: User = Depends(get_current_user),
@@ -36,7 +37,9 @@ def create_habit(
     db.add(new_habit)
     db.commit()
     db.refresh(new_habit)
-    return {"message": "Habit created", "habit_id": new_habit.id}
+
+    response = HabitResponse.from_orm(habit)
+    return response
 
 
 @router.post("/{habit_id}/update", response_model=HabitResponse)
@@ -58,7 +61,15 @@ def update_habit(
 
     db.commit()
     db.refresh(db_habit)
-    return db_habit
+
+    today_mark = (
+        db.query(HabitTracker)
+        .filter(HabitTracker.habit_id == habit_id, HabitTracker.date_mark == date.today())
+        .first()
+    )
+    response = HabitResponse.from_orm(habit)
+    response.today_mark = today_mark
+    return response
 
 
 @router.delete("/{habit_id}/delete", status_code=status.HTTP_200_OK)
@@ -76,14 +87,52 @@ def delete_habit(
     return {"message": "Habit deleted"}
 
 
+@router.post("/{habit_id}/mark", response_model=HabitResponse)
+def set_mark_on_habit(
+        habit_id: int,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user),
+
+):
+    habit = db.query(Habit).filter(Habit.id == habit_id).first()
+    response = HabitResponse.from_orm(habit)
+    today_habit_mark = db.query(HabitTracker).filter(HabitTracker.habit_id == habit_id,
+                                                     HabitTracker.date_mark == date.today()).first()
+
+    if today_habit_mark:
+        # Отметка за сегодня уже сделана, пользователь хочет убрать отметку
+        db.delete(today_habit_mark)
+        db.commit()
+        response.today_mark = None
+        return response
+
+    # Отметки за сегодня еще нет, ставим
+    today_habit_mark = HabitTracker(
+        habit_id=habit_id,
+        date_mark=date.today()
+    )
+    db.add(today_habit_mark)
+    db.commit()
+
+    response.today_mark = date.today()
+    return response
+
+
 @router.get("/{habit_id}", response_model=HabitResponse)
 def get_habit(
         habit_id: int,
         db: Session = Depends(get_db),
         current_user: Any = Depends(get_current_user),
 ):
-    habit = db.query(Habit).filter(Habit.id == habit_id).scalar()
-    return habit
+    habit = db.query(Habit).filter(Habit.id == habit_id).first()
+    today_mark = (
+        db.query(HabitTracker)
+        .filter(HabitTracker.habit_id == habit_id, HabitTracker.date_mark == date.today())
+        .first()
+    )
+    response = HabitResponse.from_orm(habit)
+    response.today_mark = today_mark
+    return response
 
 
 @router.get("", response_model=List[HabitResponse])

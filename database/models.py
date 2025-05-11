@@ -1,5 +1,5 @@
 import bcrypt
-from sqlalchemy import Column, Integer, String, ForeignKey, Date
+from sqlalchemy import Column, Integer, String, ForeignKey, Date, UniqueConstraint
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
@@ -37,3 +37,18 @@ class Habit(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
 
     user = relationship("User", back_populates="habits", lazy="selectin")
+    dates = relationship("HabitTracker", back_populates="habit", lazy="selectin")
+
+
+class HabitTracker(Base):
+    __tablename__ = "habit_trackers"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    habit_id = Column(Integer, ForeignKey("habits.id"), nullable=False, index=True)
+    date_mark = Column(Date, index=True)
+
+    habit = relationship("Habit", back_populates="dates", lazy="selectin")
+
+    __table_args__ = (
+        UniqueConstraint('habit_id', 'date_mark', name='uq_habit_date'),
+    )
