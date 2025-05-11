@@ -20,7 +20,7 @@ field_names_dict = {"title": "Название",
 def habit_fields_inline(data):
     markup = types.InlineKeyboardMarkup(row_width=1)
     for field, value in data.items():
-        if field != "id":
+        if not field in ["id", "today_mark"]:
             if field == "start_at":
                 value = value.split('T')[0]
             btn = types.InlineKeyboardButton(
@@ -28,11 +28,21 @@ def habit_fields_inline(data):
                 callback_data=field
             )
             markup.add(btn)
-    btn = types.InlineKeyboardButton(
+    if data["today_mark"]:
+        btn1 = types.InlineKeyboardButton(
+            text=f"✅ Сегодня привычка выполнена",
+            callback_data=f"mark_{data['id']}"
+        )
+    else:
+        btn1 = types.InlineKeyboardButton(
+            text=f"🔲 Привычка еще не выполнена",
+            callback_data=f"mark_{data['id']}"
+        )
+    btn2 = types.InlineKeyboardButton(
         text=f"Удалить привычку ❌",
         callback_data=f"delete_{data['id']}"
     )
-    markup.add(btn)
+    markup.add(btn1, btn2)
     return markup
 
 def set_repeat_period_inline():

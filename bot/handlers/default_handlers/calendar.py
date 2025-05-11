@@ -50,13 +50,6 @@ def calendar_callback(call):
             headers = {"Authorization": f"Bearer {token}"}
             response = requests.post(f"http://{API_HOST}:8000/habits/create", json=habit_payload, headers=headers)
 
-            logger.debug(f"Status response: {response.status_code}")
-
-            if response.status_code == 201:
-                bot.send_message(chat_id, "Привычка успешно создана!", reply_markup=habits_commands())
-            else:
-                bot.send_message(chat_id, f"Ошибка при создании привычки: {response.text}")
-
             # Очистка данных пользователя
             user_data.pop(chat_id, None)
 
@@ -76,9 +69,9 @@ def calendar_callback(call):
             if response.status_code == 200:
                 data = response.json()
                 # Обработка успешного ответа
-                bot.send_message(chat_id, f"Данные: {data}")
-            # else:
-            #     bot.send_message(message.chat.id, "Ошибка при выполнении запроса.")
+                bot.send_message(chat_id, "Привычка успешно добавлена", reply_markup=habit_fields_inline(data))
+            else:
+                bot.send_message(chat_id, "Ошибка при выполнении запроса.")
 
         if user_data[call.from_user.id]["action"] == "update":
             with SessionLocal() as db:
@@ -97,6 +90,9 @@ def calendar_callback(call):
             headers = {"Authorization": f"Bearer {token}"}
             response = requests.post(f"http://{API_HOST}:8000/habits/{habit_id}/update", json=habit_payload,
                                      headers=headers)
+
+            # Очистка данных пользователя
+            user_data.pop(chat_id, None)
 
             if response.status_code == 401:
                 # Токен истёк или недействителен, пробуем получить новый
