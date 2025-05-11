@@ -17,4 +17,4 @@ def bot_help(message: Message) -> None:
     """
     Функция получает на входе команду help и возвращает пользователю справку
     """
-    bot.send_message(chat_id=message.chat.id, text="Справка")
+    bot.send_message(chat_id=message.chat.id, text="Справка о работе бота")
