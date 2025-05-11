@@ -1,9 +1,9 @@
 from database.db_init import get_db
 from database.db_utils import get_habit_by_id
-from database.models import User, UserToken, Habit, HabitTracker
+from database.models import User, UserToken, Habit, HabitTracker, Reminder
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from .schemas import HabitResponse, HabitCreateRequest, HabitUpdateRequest
+from .schemas import HabitResponse, HabitCreateRequest, HabitUpdateRequest, ReminderUpdateRequest
 from auth.utils import create_access_token
 from fastapi import Depends, APIRouter, status
 from config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
@@ -133,6 +133,36 @@ def get_habit(
     response = HabitResponse.from_orm(habit)
     response.today_mark = today_mark
     return response
+
+
+@router.post("/set_reminder", status_code=status.HTTP_200_OK)
+def set_reminder(
+        reminder: ReminderUpdateRequest,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user),
+
+):
+    logger.debug(f"Start set_reminder with {reminder}")
+    db_reminder = db.query(Reminder).filter(Reminder.chat_id == reminder.chat_id).first()
+
+    logger.debug(f"Reminder from db: {db_reminder}")
+
+    if db_reminder:
+        db_reminder.time = reminder.time
+        db_reminder.timezone = reminder.timezone
+        logger.debug("Update reminder")
+
+    else:
+        db_reminder = Reminder(
+            chat_id=reminder.chat_id,
+            time=reminder.time,
+            timezone=reminder.timezone,
+        )
+        db.add(db_reminder)
+        logger.debug("Create new reminder")
+
+    db.commit()
+    return {"message": "Time set for reminder"}
 
 
 @router.get("", response_model=List[HabitResponse])

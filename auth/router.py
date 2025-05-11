@@ -32,10 +32,16 @@ def auth(auth_req: AuthRequest, db: Session = Depends(get_db)):
             db.add(user)
             db.commit()
             db.refresh(user)
+            # TODO для нового пользователя поставить время напоминания по умолчанию
         except SQLAlchemyError as e:
             db.rollback()
             logger.error(f"Error creating user: {e}")
             raise
+
+    old_token = db.execute(UserToken).filter(UserToken.user_id == user.id).first()
+    if old_token:
+        db.delete(old_token)
+        db.commit()
 
     token_data = {"sub": str(user.id)}
     access_token = create_access_token(

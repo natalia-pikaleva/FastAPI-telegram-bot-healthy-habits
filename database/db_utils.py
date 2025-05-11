@@ -1,10 +1,5 @@
-import logging
-from typing import List
-
-from fastapi import HTTPException, status
-from fastapi.responses import JSONResponse
 from sqlalchemy import select, desc
-from sqlalchemy.orm import selectinload, Session
+from sqlalchemy.orm import Session
 from config import setup_logging
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -51,8 +46,12 @@ def get_token_for_user(db: Session, chat_id: int):
 def save_token_for_user(db: Session, user: User, access_token):
     """Сохранение токена пользователя"""
     try:
-        user_token = UserToken(user_id=user.id, token=access_token)
-        db.add(user_token)
+        user_token = db.execute(UserToken).filter(UserToken.user_id == user.id).first()
+        if user_token:
+            user_token.token = access_token
+        else:
+            user_token = UserToken(user_id=user.id, token=access_token)
+            db.add(user_token)
         db.commit()
     except SQLAlchemyError as e:
         db.rollback()

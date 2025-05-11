@@ -1,4 +1,4 @@
-from datetime import datetime, date
+from datetime import datetime, date, time
 from pydantic import BaseModel
 from typing import Optional
 from pydantic import ConfigDict
@@ -32,3 +32,8 @@ class HabitUpdateRequest(BaseModel):
     title: Optional[str] = None
     repeat_period: Optional[str] = None
     start_at: Optional[date] = None
+
+class ReminderUpdateRequest(BaseModel):
+    chat_id: int
+    time: time
+    timezone: str

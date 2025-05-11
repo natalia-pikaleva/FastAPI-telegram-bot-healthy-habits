@@ -4,12 +4,10 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
-from typing import Annotated
 from config import SECRET_KEY, ALGORITHM
 from database.db_init import get_db
 from database.db_utils import get_user_by_id
 from database.models import User
-from .schemas import TokenData
 from config import setup_logging
 import logging
 
