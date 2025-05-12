@@ -28,7 +28,6 @@ def calendar_callback(call):
     date = calendar.calendar_query_handler(bot, call, name, action, year, month, day)
     chat_id = call.from_user.id
     if action == 'DAY':
-        bot.send_message(call.from_user.id, f"Вы выбрали дату: {date.strftime('%d.%m.%Y')} - {date}")
 
         if user_data[call.from_user.id]["action"] == "create":
             logger.debug("Action is create")
@@ -73,7 +72,7 @@ def calendar_callback(call):
             else:
                 bot.send_message(chat_id, "Ошибка при выполнении запроса.")
 
-        if user_data[call.from_user.id]["action"] == "update":
+        elif user_data[call.from_user.id]["action"] == "update":
             with SessionLocal() as db:
                 token = get_token_for_user(db, chat_id)
             if not token:
