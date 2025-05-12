@@ -112,3 +112,18 @@ def confirmation_of_habit_deletion_inline():
 
     markup.add(*[btn1, btn2])
     return markup
+
+
+def mark_habit(habit_id):
+    markup = types.InlineKeyboardMarkup(row_width=2)
+    btn1 = types.InlineKeyboardButton(
+        text="Да",
+        callback_data=f"mark_{habit_id}"
+    )
+    btn2 = types.InlineKeyboardButton(
+        text="Нет",
+        callback_data="cancel"
+    )
+
+    markup.add(*[btn1, btn2])
+    return markup

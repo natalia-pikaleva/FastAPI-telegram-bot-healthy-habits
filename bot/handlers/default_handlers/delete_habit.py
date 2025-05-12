@@ -64,4 +64,4 @@ def callback_delete_habit_second_step(call):
 def callback_cancel(call):
     chat_id = call.from_user.id
 
-    bot.send_message(chat_id, "Удаление отменено", reply_markup=habits_commands())
+    bot.send_message(chat_id, "Хорошо", reply_markup=habits_commands())

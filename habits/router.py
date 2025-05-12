@@ -101,9 +101,7 @@ def set_mark_on_habit(
 
     if today_habit_mark:
         # Отметка за сегодня уже сделана, пользователь хочет убрать отметку
-        db.delete(today_habit_mark)
-        db.commit()
-        response.today_mark = None
+        response.today_mark = date.today()
         return response
 
     # Отметки за сегодня еще нет, ставим
