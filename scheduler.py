@@ -7,6 +7,8 @@ from datetime import datetime, timedelta, timezone
 from database.models import Reminder, Habit
 import pytz
 
+from bot.keyboards.inline.core import mark_habit
+
 scheduler = BackgroundScheduler()
 
 
@@ -23,10 +25,15 @@ def send_reminders():
             reminder_time = reminder.time.replace(second=0, microsecond=0)
 
             if now_local == reminder_time:
-                habit_title, _ = db.query(Habit.title).filter(Habit.id == reminder.habit_id).first()
+                habit = db.query(Habit).filter(Habit.id == reminder.habit_id).first()
                 bot.send_message(
                     chat_id=reminder.chat_id,
-                    text=f"⏰ Напоминание: пора выполнить привычку {habit_title}"
+                    text=f"⏰ Напоминание: пора выполнить привычку {habit.title}"
+                )
+                bot.send_message(
+                    chat_id=reminder.chat_id,
+                    text=f"Поставить отметку о выполнении?",
+                    reply_markup=mark_habit(reminder.habit_id)
                 )
     finally:
         db.close()

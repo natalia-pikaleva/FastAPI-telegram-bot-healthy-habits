@@ -19,7 +19,6 @@ def handle_habit_callback(call):
     в виде inline keyboard и сохраняем id привычки в словаре"""
     habit_id = int(call.data.split('_')[1])
     user_selected_habit[call.from_user.id]["habit_id"] = habit_id
-    bot.send_message(call.from_user.id, f"Сейчас сохранена привычка с id: {user_selected_habit[call.from_user.id]["habit_id"]}")
 
     with SessionLocal() as db:
         token = get_token_for_user(db, call.from_user.id)
