@@ -50,6 +50,11 @@ class Habit(Base):
         back_populates="habit",
         lazy="selectin",
         cascade="all, delete-orphan")
+    reminder = relationship(
+        "Reminder",
+        back_populates="habit",
+        lazy="selectin",
+        cascade="all, delete-orphan")
 
 
 class HabitTracker(Base):
@@ -70,6 +75,9 @@ class Reminder(Base):
     __tablename__ = "reminders"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    habit_id = Column(Integer, ForeignKey("habits.id"), nullable=False, index=True)
     time = Column(Time)
     timezone = Column(String(50))
     chat_id = Column(Integer)
+
+    habit = relationship("Habit", back_populates="reminder", lazy="selectin")
