@@ -46,7 +46,7 @@ def get_token_for_user(db: Session, chat_id: int):
 def save_token_for_user(db: Session, user: User, access_token):
     """Сохранение токена пользователя"""
     try:
-        user_token = db.execute(UserToken).filter(UserToken.user_id == user.id).first()
+        user_token = db.execute(select(UserToken).filter(UserToken.user_id == user.id)).scalar_one_or_none()
         if user_token:
             user_token.token = access_token
         else:

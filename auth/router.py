@@ -38,10 +38,14 @@ def auth(auth_req: AuthRequest, db: Session = Depends(get_db)):
             logger.error(f"Error creating user: {e}")
             raise
 
-    old_token = db.execute(UserToken).filter(UserToken.user_id == user.id).first()
+    old_token = db.execute(select(UserToken).filter(UserToken.user_id == user.id)).scalar_one_or_none()
+
     if old_token:
+        logger.debug("Delete okd token")
+
         db.delete(old_token)
         db.commit()
+
 
     token_data = {"sub": str(user.id)}
     access_token = create_access_token(

@@ -45,8 +45,9 @@ def habit_fields_inline(data):
     markup.add(btn1, btn2)
     return markup
 
+
 def set_repeat_period_inline():
-    markup = types.InlineKeyboardMarkup(row_width=1)
+    markup = types.InlineKeyboardMarkup(row_width=2)
     btn1 = types.InlineKeyboardButton(
         text="Ежедневно",
         callback_data="daily"
@@ -56,8 +57,9 @@ def set_repeat_period_inline():
         callback_data="weekly"
     )
 
-    markup.add(btn1, btn2)
+    markup.add(*[btn1, btn2])
     return markup
+
 
 def hours_inline():
     markup = types.InlineKeyboardMarkup(row_width=4)
@@ -71,6 +73,7 @@ def hours_inline():
     markup.add(*buttons)
     return markup
 
+
 def timezone_inline():
     markup = types.InlineKeyboardMarkup(row_width=4)
     buttons = []
@@ -82,4 +85,19 @@ def timezone_inline():
         )
         buttons.append(btn)
     markup.add(*buttons)
+    return markup
+
+
+def confirmation_of_habit_deletion_inline():
+    markup = types.InlineKeyboardMarkup(row_width=2)
+    btn1 = types.InlineKeyboardButton(
+        text="Удалить",
+        callback_data="yes_delete"
+    )
+    btn2 = types.InlineKeyboardButton(
+        text="Отмена",
+        callback_data="cancel"
+    )
+
+    markup.add(*[btn1, btn2])
     return markup
