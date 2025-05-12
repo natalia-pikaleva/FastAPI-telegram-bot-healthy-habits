@@ -4,10 +4,11 @@ from apscheduler.triggers.cron import CronTrigger
 from database.db_init import SessionLocal
 from bot.setup import bot
 from datetime import datetime, timedelta, timezone
-from database.models import Reminder
+from database.models import Reminder, Habit
 import pytz
 
 scheduler = BackgroundScheduler()
+
 
 def send_reminders():
     db = SessionLocal()
@@ -20,13 +21,16 @@ def send_reminders():
             user_tz = pytz.timezone(reminder.timezone)
             now_local = now_utc.astimezone(user_tz).time().replace(second=0, microsecond=0)
             reminder_time = reminder.time.replace(second=0, microsecond=0)
+
             if now_local == reminder_time:
+                habit_title, _ = db.query(Habit.title).filter(Habit.id == reminder.habit_id).first()
                 bot.send_message(
                     chat_id=reminder.chat_id,
-                    text=f"⏰ Напоминание: пора выполнить привычки"
+                    text=f"⏰ Напоминание: пора выполнить привычку {habit_title}"
                 )
     finally:
         db.close()
+
 
 def start_scheduler():
     scheduler.add_job(send_reminders, CronTrigger(minute="*"))

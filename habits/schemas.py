@@ -18,6 +18,7 @@ class HabitResponse(BaseModel):
     repeat_period: str
     start_at: date
     today_mark: Optional[HabitTrackerResponse] = None
+    reminder_time: time|None = None
 
     model_config = ConfigDict(from_attributes=True)
 

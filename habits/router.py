@@ -118,6 +118,39 @@ def set_mark_on_habit(
     return response
 
 
+@router.post("/{habit_id}/set_reminder", status_code=status.HTTP_200_OK)
+def set_reminder(
+        habit_id: int,
+        reminder: ReminderUpdateRequest,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user),
+
+):
+    logger.debug(f"Start set_reminder with {reminder}")
+    db_reminder = db.query(Reminder).filter(Reminder.chat_id == reminder.chat_id,
+                                   Reminder.habit_id == habit_id).first()
+
+    logger.debug(f"Reminder from db: {db_reminder}")
+
+    if db_reminder:
+        db_reminder.time = reminder.time
+        db_reminder.timezone = reminder.timezone
+        logger.debug("Update reminder")
+
+    else:
+        db_reminder = Reminder(
+            habit_id=habit_id,
+            chat_id=reminder.chat_id,
+            time=reminder.time,
+            timezone=reminder.timezone,
+        )
+        db.add(db_reminder)
+        logger.debug("Create new reminder")
+
+    db.commit()
+    return {"message": "Time set for reminder"}
+
+
 @router.get("/{habit_id}", response_model=HabitResponse)
 def get_habit(
         habit_id: int,
@@ -132,37 +165,10 @@ def get_habit(
     )
     response = HabitResponse.from_orm(habit)
     response.today_mark = today_mark
+    reminder = db.query(Reminder).filter(Reminder.habit_id == habit.id).first()
+    if reminder:
+        response.reminder_time = reminder.time
     return response
-
-
-@router.post("/set_reminder", status_code=status.HTTP_200_OK)
-def set_reminder(
-        reminder: ReminderUpdateRequest,
-        db: Session = Depends(get_db),
-        current_user: User = Depends(get_current_user),
-
-):
-    logger.debug(f"Start set_reminder with {reminder}")
-    db_reminder = db.query(Reminder).filter(Reminder.chat_id == reminder.chat_id).first()
-
-    logger.debug(f"Reminder from db: {db_reminder}")
-
-    if db_reminder:
-        db_reminder.time = reminder.time
-        db_reminder.timezone = reminder.timezone
-        logger.debug("Update reminder")
-
-    else:
-        db_reminder = Reminder(
-            chat_id=reminder.chat_id,
-            time=reminder.time,
-            timezone=reminder.timezone,
-        )
-        db.add(db_reminder)
-        logger.debug("Create new reminder")
-
-    db.commit()
-    return {"message": "Time set for reminder"}
 
 
 @router.get("", response_model=List[HabitResponse])

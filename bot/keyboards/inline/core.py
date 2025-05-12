@@ -20,7 +20,7 @@ field_names_dict = {"title": "Название",
 def habit_fields_inline(data):
     markup = types.InlineKeyboardMarkup(row_width=1)
     for field, value in data.items():
-        if not field in ["id", "today_mark"]:
+        if not field in ["id", "today_mark", "reminder_time"]:
             if field == "start_at":
                 value = value.split('T')[0]
             btn = types.InlineKeyboardButton(
@@ -38,11 +38,22 @@ def habit_fields_inline(data):
             text=f"🔲 Привычка еще не выполнена",
             callback_data=f"mark_{data['id']}"
         )
-    btn2 = types.InlineKeyboardButton(
+    if data.get("reminder_time") is not None:
+        btn2 = types.InlineKeyboardButton(
+            text=f"Время напоминания: {data['reminder_time'][:-3]}",
+            callback_data=f"setreminder_{data['id']}"
+        )
+    else:
+        btn2 = types.InlineKeyboardButton(
+            text="Установить время напоминания",
+            callback_data=f"setreminder_{data['id']}"
+        )
+    btn3 = types.InlineKeyboardButton(
         text=f"Удалить привычку ❌",
         callback_data=f"delete_{data['id']}"
     )
-    markup.add(btn1, btn2)
+    markup.add(btn1, btn2, btn3)
+
     return markup
 
 

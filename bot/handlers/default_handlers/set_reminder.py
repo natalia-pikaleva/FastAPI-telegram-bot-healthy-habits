@@ -12,24 +12,24 @@ import logging
 from database.db_utils import get_token_for_user
 from .create_habit import user_data
 from datetime import time
+from .get_habit import user_selected_habit
 
 setup_logging()
 logger = logging.getLogger(__name__)
 
 
-@bot.message_handler(commands=["set_reminder"])
-@bot.message_handler(func=lambda message: message.text == "Установить время напоминания")
-def bot_set_reminder(message: Message) -> None:
+@bot.callback_query_handler(func=lambda call: call.data.startswith('setreminder_'))
+def bot_set_reminder_to_habit(call):
     """
-    Хендлер для установки времени напоминания
+    Хендлер для установки времени напоминания для конкретной привычки
     """
-    with SessionLocal() as db:
-        token = get_token_for_user(db, message.chat.id)
-    if not token:
-        bot.send_message(message.chat.id, "Пожалуйста, авторизуйтесь через /start")
-        return
+    chat_id = call.from_user.id
 
-    bot.send_message(message.chat.id, "Выберите удобное время для напоминаний", reply_markup=hours_inline())
+    habit_id = int(call.data.split('_')[1])
+    user_selected_habit[chat_id]["habit_id"] = habit_id
+    bot.send_message(chat_id, f"Записала id привычки: {user_selected_habit[chat_id]["habit_id"]}")
+
+    bot.send_message(chat_id, "Выберите удобное время для напоминаний", reply_markup=hours_inline())
 
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('hour_'))
@@ -39,6 +39,8 @@ def handle_set_hour_callback(call):
     chat_id = call.from_user.id
 
     user_data[chat_id]["hour"] = f"{hour:02d}:00"
+    bot.send_message(chat_id, f"Записала время: {user_data[chat_id]["hour"]}")
+
 
     bot.send_message(chat_id, "Выберите ваш часовой пояс", reply_markup=timezone_inline())
 
@@ -61,13 +63,18 @@ def handle_set_timezone_callback(call):
     # Формируем данные для отправки на FastAPI
     reminder_payload = {
         "chat_id": chat_id,
-        "time": user_data[chat_id]['hour'], # строка формата "08:00"
+        "time": user_data[chat_id]['hour'],  # строка формата "08:00"
         "timezone": timezone,
     }
+    bot.send_message(chat_id, f"Получаю id привычки из словаря")
+
+    habit_id = user_selected_habit[chat_id]["habit_id"]
+
+    bot.send_message(chat_id, f"id привычки {habit_id}")
+
 
     headers = {"Authorization": f"Bearer {token}"}
-    response = requests.post(f"http://{API_HOST}:8000/habits/set_reminder", json=reminder_payload, headers=headers)
-
+    response = requests.post(f"http://{API_HOST}:8000/habits/{habit_id}/set_reminder", json=reminder_payload, headers=headers)
 
     if response.status_code == 401:
         # Токен истёк или недействителен, пробуем получить новый
