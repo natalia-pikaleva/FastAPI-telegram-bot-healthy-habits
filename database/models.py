@@ -1,4 +1,4 @@
-import bcrypt
+from datetime import date
 from sqlalchemy import Column, Integer, String, ForeignKey, Date, UniqueConstraint, Time
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -55,6 +55,19 @@ class Habit(Base):
         back_populates="habit",
         lazy="selectin",
         cascade="all, delete-orphan")
+
+    @property
+    def date_mark(self):
+        today = date.today()
+        if today in set([tracker for tracker in self.dates]):
+            return today
+        return None
+
+    @property
+    def reminder_time(self):
+        if self.reminder:
+            return self.reminder.time
+        return None
 
 
 class HabitTracker(Base):

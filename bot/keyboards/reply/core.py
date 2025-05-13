@@ -9,7 +9,8 @@ def habits_commands():
     btn1 = types.KeyboardButton("Обо мне")
     btn2 = types.KeyboardButton("Создать новую привычку")
     btn3 = types.KeyboardButton("Список всех привычек")
+    btn4 = types.KeyboardButton("Список привычек без отметки")
 
-    markup.add(btn1, btn2, btn3)
+    markup.add(btn1, btn2, btn3, btn4)
 
     return markup
