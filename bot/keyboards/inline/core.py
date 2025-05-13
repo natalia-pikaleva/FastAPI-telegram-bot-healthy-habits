@@ -1,14 +1,28 @@
 from telebot import types
 
 
-def habit_list_inline(data):
-    markup = types.InlineKeyboardMarkup(row_width=1)
+def habit_list_inline(data, type_answer):
+    markup = types.InlineKeyboardMarkup(row_width=2)
+    buttons = []
     for habit in data:
-        btn = types.InlineKeyboardButton(
+        btn1 = types.InlineKeyboardButton(
             text=habit["title"],
             callback_data=f"habit_{habit['id']}"
         )
-        markup.add(btn)
+        if "today_mark" in habit and habit["today_mark"] is not None:
+            btn2 = types.InlineKeyboardButton(
+                text="✅",
+                callback_data=f"mark_{habit['id']}_{type_answer}"
+            )
+        else:
+            btn2 = types.InlineKeyboardButton(
+                text="🔲",
+                callback_data=f"mark_{habit['id']}_{type_answer}"
+            )
+        buttons.append(btn1)
+        buttons.append(btn2)
+
+    markup.add(*buttons)
     return markup
 
 
@@ -17,7 +31,7 @@ field_names_dict = {"title": "Название",
                     "start_at": "Дата начала"}
 
 
-def habit_fields_inline(data):
+def habit_fields_inline(data, type_answer):
     markup = types.InlineKeyboardMarkup(row_width=1)
     for field, value in data.items():
         if not field in ["id", "today_mark", "reminder_time"]:
@@ -31,12 +45,12 @@ def habit_fields_inline(data):
     if data["today_mark"]:
         btn1 = types.InlineKeyboardButton(
             text=f"✅ Сегодня привычка выполнена",
-            callback_data=f"mark_{data['id']}"
+            callback_data=f"mark_{data['id']}_{type_answer}"
         )
     else:
         btn1 = types.InlineKeyboardButton(
             text=f"🔲 Привычка еще не выполнена",
-            callback_data=f"mark_{data['id']}"
+            callback_data=f"mark_{data['id']}_{type_answer}"
         )
     if data.get("reminder_time") is not None:
         btn2 = types.InlineKeyboardButton(
@@ -118,7 +132,7 @@ def mark_habit(habit_id):
     markup = types.InlineKeyboardMarkup(row_width=2)
     btn1 = types.InlineKeyboardButton(
         text="Да",
-        callback_data=f"mark_{habit_id}"
+        callback_data=f"mark_{habit_id}_one"
     )
     btn2 = types.InlineKeyboardButton(
         text="Нет",

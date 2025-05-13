@@ -24,6 +24,7 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 DEFAULT_COMMANDS = (("start", "Меню"),
                     ("create_habit", "Создать новую привычку"),
                     ("habits_list", "Список всех привычек"),
+                    ("unmarked_habits", "Список привычек без отметки"),
                     ("help", "Помощь"))
 
 LOGGING_CONFIG = {

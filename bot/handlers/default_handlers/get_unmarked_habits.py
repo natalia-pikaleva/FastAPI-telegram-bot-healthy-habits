@@ -11,13 +11,13 @@ setup_logging()
 logger = logging.getLogger(__name__)
 
 
-@bot.message_handler(commands=["habits_list"])
-@bot.message_handler(func=lambda message: message.text == "Список всех привычек")
-def bot_get_habits(message: Message) -> None:
+@bot.message_handler(commands=["unmarked_habits"])
+@bot.message_handler(func=lambda message: message.text == "Список привычек без отметки")
+def bot_get_unmarked_habits(message: Message) -> None:
     """
-    Хендлер для просмотра всех привычек
+    Хендлер для получения списка не выполненных привычек
     """
-    logger.info("Start bot_create_habit")
+    logger.info("Start bot_get_unmarked_habits")
 
     with SessionLocal() as db:
         token = get_token_for_user(db, message.chat.id)
@@ -26,9 +26,7 @@ def bot_get_habits(message: Message) -> None:
         return
 
     headers = {"Authorization": f"Bearer {token}"}
-    response = requests.get(f"http://{API_HOST}:8000/habits", headers=headers)
-    logger.debug(f'Headers: {response.request.headers}')
-    logger.debug(f'Code: {response.status_code}')
+    response = requests.get(f"http://{API_HOST}:8000/habits/unmarked", headers=headers)
 
     if response.status_code == 401:
         # Токен истёк или недействителен, пробуем получить новый
@@ -46,6 +44,10 @@ def bot_get_habits(message: Message) -> None:
     if response.status_code == 200:
         data = response.json()
         # Обработка успешного ответа
-        bot.send_message(message.chat.id, "Список ваших привычек (с отметками о выполнении за сегодня):", reply_markup=habit_list_inline(data, "list"))
+        if data == []:
+            bot.send_message(message.chat.id, "За сегодня все привычки выполнены! Так держать!")
+
+        else:
+            bot.send_message(message.chat.id, "Список привычек без отметок о выполнении за сегодня:", reply_markup=habit_list_inline(data, "unmarkedlist"))
     else:
         bot.send_message(message.chat.id, "Ошибка при выполнении запроса.")

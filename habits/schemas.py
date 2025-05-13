@@ -8,8 +8,7 @@ class HabitTrackerResponse(BaseModel):
     id: int
     date_mark: date
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class HabitResponse(BaseModel):
@@ -18,10 +17,17 @@ class HabitResponse(BaseModel):
     repeat_period: str
     start_at: date
     today_mark: Optional[HabitTrackerResponse] = None
-    reminder_time: time|None = None
+    reminder_time: Optional[time] = None
 
     model_config = ConfigDict(from_attributes=True)
 
+class UnmarkedHabitResponse(BaseModel):
+    id: int
+    title: str
+    repeat_period: str
+    start_at: date
+
+    # model_config = ConfigDict(from_attributes=True)
 
 class HabitCreateRequest(BaseModel):
     title: str

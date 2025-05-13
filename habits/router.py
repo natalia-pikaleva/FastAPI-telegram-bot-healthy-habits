@@ -1,16 +1,11 @@
 from database.db_init import get_db
-from database.db_utils import get_habit_by_id
-from database.models import User, UserToken, Habit, HabitTracker, Reminder
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-from .schemas import HabitResponse, HabitCreateRequest, HabitUpdateRequest, ReminderUpdateRequest
-from auth.utils import create_access_token
-from fastapi import Depends, APIRouter, status
-from config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
+from database.models import User, Habit, HabitTracker, Reminder
+from sqlalchemy import select, and_
+from sqlalchemy.orm import Session, joinedload, aliased
+from .schemas import HabitResponse, HabitCreateRequest, HabitUpdateRequest, ReminderUpdateRequest, UnmarkedHabitResponse, HabitTrackerResponse
+from fastapi import Depends, APIRouter, status, HTTPException
 from config import setup_logging
 import logging
-from sqlalchemy.exc import SQLAlchemyError
-import json
 from typing import List, Any, Annotated
 from auth.utils import get_current_user
 from datetime import date
@@ -40,6 +35,29 @@ def create_habit(
 
     response = HabitResponse.from_orm(habit)
     return response
+
+
+@router.get("/unmarked", response_model=List[UnmarkedHabitResponse])
+def get_unmarked_habits_list(
+        db: Session = Depends(get_db),
+        current_user: Any = Depends(get_current_user),
+):
+    try:
+        subq = select(HabitTracker.habit_id).where(HabitTracker.date_mark == date.today()).subquery()
+
+        habits = db.query(Habit).filter(Habit.user_id == current_user.id,
+                                        ~Habit.id.in_(subq)).options(
+            joinedload(Habit.dates),
+            joinedload(Habit.reminder)
+        ).all()
+
+        logger.error(f"habits: {habits}")
+
+        return habits
+
+    except Exception as e:
+        logger.error(f"Error: {e}", exc_info=True)
+        raise HTTPException(status_code=500)
 
 
 @router.post("/{habit_id}/update", response_model=HabitResponse)
@@ -126,7 +144,7 @@ def set_reminder(
 ):
     logger.debug(f"Start set_reminder with {reminder}")
     db_reminder = db.query(Reminder).filter(Reminder.chat_id == reminder.chat_id,
-                                   Reminder.habit_id == habit_id).first()
+                                            Reminder.habit_id == habit_id).first()
 
     logger.debug(f"Reminder from db: {db_reminder}")
 
@@ -174,5 +192,33 @@ def get_habits_list(
         db: Session = Depends(get_db),
         current_user: Any = Depends(get_current_user),
 ):
-    habits = db.query(Habit).filter(Habit.user_id == current_user.id).all()
-    return habits
+
+    today = date.today()
+    today_tracker = aliased(HabitTracker)
+
+    query = (
+        db.query(Habit, today_tracker)
+        .outerjoin(
+            today_tracker,
+            and_(
+                Habit.id == today_tracker.habit_id,
+                today_tracker.date_mark == today
+            )
+        )
+        .filter(Habit.user_id == current_user.id)
+    )
+
+    results = query.all()
+
+    habit_responses = []
+    for habit, today_mark in results:
+        habit_response = HabitResponse.from_orm(habit)
+
+        if today_mark:
+            habit_response.today_mark = HabitTrackerResponse.from_orm(today_mark)
+        else:
+            habit_response.today_mark = None
+
+        habit_responses.append(habit_response)
+
+    return habit_responses
