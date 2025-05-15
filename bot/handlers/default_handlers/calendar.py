@@ -1,17 +1,13 @@
 from ...setup import bot
-from telebot_calendar import Calendar, CallbackData, RUSSIAN_LANGUAGE
-import datetime
-from telebot.types import Message
-from ...setup import bot
 from database.db_init import SessionLocal
 from database.db_utils import get_token_for_user
 import requests
 from bot.keyboards.reply.core import habits_commands
-from config import setup_logging, API_HOST
+from config import API_HOST
 import logging
 from telebot_calendar import Calendar, CallbackData, RUSSIAN_LANGUAGE
-import datetime
-from collections import defaultdict
+
+
 from .update_habit import user_selected_habit
 from .create_habit import user_data
 from ...keyboards.inline.core import habit_fields_inline
@@ -29,7 +25,7 @@ def calendar_callback(call):
     chat_id = call.from_user.id
     if action == 'DAY':
 
-        if user_data[call.from_user.id]["action"] == "create":
+        if user_data[chat_id]["action"] == "create":
             logger.debug("Action is create")
 
             # Формируем данные для отправки на FastAPI
@@ -43,7 +39,7 @@ def calendar_callback(call):
             with SessionLocal() as db:
                 token = get_token_for_user(db, chat_id)
             if not token:
-                bot.send_message(chat_id, "Пожалуйста, авторизуйтесь через /start")
+                bot.send_message(chat_id, "Пожалуйста, авторизуйтесь через /start", reply_markup=habits_commands())
                 return
 
             headers = {"Authorization": f"Bearer {token}"}
@@ -60,23 +56,24 @@ def calendar_callback(call):
                 )
                 if auth_response.status_code == 200:
                     new_token = auth_response.json().get("access_token")
-                    bot.send_message(chat_id, "Токен обновлён, повторите команду.")
+                    bot.send_message(chat_id, "Токен обновлён, повторите команду.", reply_markup=habits_commands())
                 else:
-                    bot.send_message(chat_id, "Ошибка авторизации, попробуйте позже.")
+                    bot.send_message(chat_id, "Ошибка авторизации, попробуйте позже.", reply_markup=habits_commands())
                 return
 
             if response.status_code == 200:
                 data = response.json()
-                # Обработка успешного ответа
-                bot.send_message(chat_id, "Привычка успешно добавлена", reply_markup=habit_fields_inline(data))
-            else:
-                bot.send_message(chat_id, "Ошибка при выполнении запроса.")
 
-        elif user_data[call.from_user.id]["action"] == "update":
+                # Обработка успешного ответа
+                bot.send_message(chat_id, "Привычка успешно добавлена", reply_markup=habit_fields_inline(data, ""))
+            else:
+                bot.send_message(chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands())
+
+        elif user_data[chat_id]["action"] == "update":
             with SessionLocal() as db:
                 token = get_token_for_user(db, chat_id)
             if not token:
-                bot.send_message(chat_id, "Пожалуйста, авторизуйтесь через /start")
+                bot.send_message(chat_id, "Пожалуйста, авторизуйтесь через /start", reply_markup=habits_commands())
                 return
 
             # Формируем данные для отправки на FastAPI
@@ -101,16 +98,16 @@ def calendar_callback(call):
                 )
                 if auth_response.status_code == 200:
                     new_token = auth_response.json().get("access_token")
-                    bot.send_message(chat_id, "Токен обновлён, повторите команду.")
+                    bot.send_message(chat_id, "Токен обновлён, повторите команду.", reply_markup=habits_commands())
                 else:
-                    bot.send_message(chat_id, "Ошибка авторизации, попробуйте позже.")
+                    bot.send_message(chat_id, "Ошибка авторизации, попробуйте позже.", reply_markup=habits_commands())
                 return
 
             if response.status_code == 200:
                 data = response.json()
                 # Обработка успешного ответа
-                bot.send_message(chat_id, "Привычка успешно обновлена", reply_markup=habit_fields_inline(data))
+                bot.send_message(chat_id, "Привычка успешно обновлена", reply_markup=habit_fields_inline(data, ""))
             else:
-                bot.send_message(chat_id, "Ошибка при выполнении запроса.")
+                bot.send_message(chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands())
     elif action == 'CANCEL':
-        bot.send_message(call.from_user.id, "Выбор даты отменён")
+        bot.send_message(chat_id, "Выбор даты отменён", reply_markup=habits_commands())

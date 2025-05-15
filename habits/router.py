@@ -1,12 +1,15 @@
+from collections import defaultdict
+import datetime
 from database.db_init import get_db
 from database.models import User, Habit, HabitTracker, Reminder
 from sqlalchemy import select, and_
 from sqlalchemy.orm import Session, joinedload, aliased
-from .schemas import HabitResponse, HabitCreateRequest, HabitUpdateRequest, ReminderUpdateRequest, UnmarkedHabitResponse, HabitTrackerResponse
+from .schemas import HabitResponse, HabitCreateRequest, HabitUpdateRequest, ReminderUpdateRequest, \
+    UnmarkedHabitResponse, HabitTrackerResponse
 from fastapi import Depends, APIRouter, status, HTTPException
 from config import setup_logging
 import logging
-from typing import List, Any, Annotated
+from typing import List, Any
 from auth.utils import get_current_user
 from datetime import date
 
@@ -16,7 +19,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.post("/create", status_code=HabitResponse)
+@router.post("/create", response_model=HabitResponse)
 def create_habit(
         habit: HabitCreateRequest,
         current_user: User = Depends(get_current_user),
@@ -33,7 +36,9 @@ def create_habit(
     db.commit()
     db.refresh(new_habit)
 
-    response = HabitResponse.from_orm(habit)
+    response = HabitResponse.from_orm(new_habit)
+    response.today_mark = None
+    response.reminder_time = None
     return response
 
 
@@ -60,6 +65,60 @@ def get_unmarked_habits_list(
         raise HTTPException(status_code=500)
 
 
+@router.get("/statistics")
+def get_statistics_habit_list(
+        db: Session = Depends(get_db),
+        current_user: Any = Depends(get_current_user),
+):
+    try:
+        date_7_start = date.today() - datetime.timedelta(days=6)
+        dates_week = [date_7_start + datetime.timedelta(days=i) for i in range(7)]
+
+        habits = (db.query(Habit).filter(Habit.user_id == current_user.id)
+                  .options(joinedload(Habit.dates)).all())
+
+        logger.error(f"habits: {habits}")
+        response = []
+
+        for habit in habits:
+            data = defaultdict()
+            data["id"] = habit.id
+            data["title"] = habit.title
+            data["marked_days"] = [tracked.date_mark for tracked in habit.dates if tracked.date_mark > date_7_start]
+            data["week"] = ''.join(['✅' if tracked in set(data["marked_days"]) else '⚪️' for tracked in dates_week])
+            response.append(data)
+
+        return response
+
+    except Exception as e:
+        logger.error(f"Error: {e}", exc_info=True)
+        raise HTTPException(status_code=500)
+
+
+@router.get("/{habit_id}/statistics")
+def get_statistics_by_habit_id(
+        habit_id: int,
+        db: Session = Depends(get_db),
+        current_user: Any = Depends(get_current_user),
+):
+    try:
+        date_21_start = date.today() - datetime.timedelta(days=20)
+        dates_week = [date_21_start + datetime.timedelta(days=i) for i in range(21)]
+
+        habit = (db.query(Habit).filter(Habit.id == habit_id)
+                 .options(joinedload(Habit.dates)).scalar())
+
+        result = {'title': habit.title}
+        marked_days = [tracked.date_mark for tracked in habit.dates if tracked.date_mark > date_21_start]
+        result['tracker'] = ''.join(['✅' if tracked in set(marked_days) else '⚪️' for tracked in dates_week])
+
+        return result
+
+    except Exception as e:
+        logger.error(f"Error: {e}", exc_info=True)
+        raise HTTPException(status_code=500)
+
+
 @router.post("/{habit_id}/update", response_model=HabitResponse)
 def update_habit(
         habit: HabitUpdateRequest,
@@ -80,14 +139,8 @@ def update_habit(
     db.commit()
     db.refresh(db_habit)
 
-    today_mark = (
-        db.query(HabitTracker)
-        .filter(HabitTracker.habit_id == habit_id, HabitTracker.date_mark == date.today())
-        .first()
-    )
-    response = HabitResponse.from_orm(habit)
-    response.today_mark = today_mark
-    return response
+
+    return db_habit
 
 
 @router.delete("/{habit_id}/delete", status_code=status.HTTP_200_OK)
@@ -192,7 +245,6 @@ def get_habits_list(
         db: Session = Depends(get_db),
         current_user: Any = Depends(get_current_user),
 ):
-
     today = date.today()
     today_tracker = aliased(HabitTracker)
 

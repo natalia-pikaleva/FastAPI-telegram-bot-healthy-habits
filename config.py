@@ -25,6 +25,7 @@ DEFAULT_COMMANDS = (("start", "Меню"),
                     ("create_habit", "Создать новую привычку"),
                     ("habits_list", "Список всех привычек"),
                     ("unmarked_habits", "Список привычек без отметки"),
+                    ("statistics", "Статистика за 21 день"),
                     ("help", "Помощь"))
 
 LOGGING_CONFIG = {

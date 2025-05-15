@@ -27,7 +27,7 @@ def callback_mark_habit(call):
     with SessionLocal() as db:
         token = get_token_for_user(db, chat_id)
     if not token:
-        bot.send_message(chat_id, "Пожалуйста, авторизуйтесь через /start")
+        bot.send_message(chat_id, "Пожалуйста, авторизуйтесь через /start", reply_markup=habits_commands())
         return
 
     headers = {"Authorization": f"Bearer {token}"}
@@ -42,9 +42,9 @@ def callback_mark_habit(call):
         )
         if auth_response.status_code == 200:
             new_token = auth_response.json().get("access_token")
-            bot.send_message(chat_id, "Токен обновлён, повторите команду.")
+            bot.send_message(chat_id, "Токен обновлён, повторите команду.", reply_markup=habits_commands())
         else:
-            bot.send_message(chat_id, "Ошибка авторизации, попробуйте позже.")
+            bot.send_message(chat_id, "Ошибка авторизации, попробуйте позже.", reply_markup=habits_commands())
         return
 
     if response.status_code == 200:
@@ -68,9 +68,9 @@ def callback_mark_habit(call):
                 )
                 if auth_response.status_code == 200:
                     new_token = auth_response.json().get("access_token")
-                    bot.send_message(chat_id, "Токен обновлён, повторите команду.")
+                    bot.send_message(chat_id, "Токен обновлён, повторите команду.", reply_markup=habits_commands())
                 else:
-                    bot.send_message(chat_id, "Ошибка авторизации, попробуйте позже.")
+                    bot.send_message(chat_id, "Ошибка авторизации, попробуйте позже.", reply_markup=habits_commands())
                 return
 
             if response.status_code == 200:
@@ -79,7 +79,7 @@ def callback_mark_habit(call):
                 bot.send_message(chat_id, "Список ваших привычек:",
                                  reply_markup=habit_list_inline(data, "list"))
             else:
-                bot.send_message(chat_id, "Ошибка при выполнении запроса.")
+                bot.send_message(chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands())
 
         elif type_answer == "unmarkedlist":
             # если тип ответа unmarkedlist - надо вернуть пользователю список всех не выполненных сегодня привычек
@@ -94,9 +94,9 @@ def callback_mark_habit(call):
                 )
                 if auth_response.status_code == 200:
                     new_token = auth_response.json().get("access_token")
-                    bot.send_message(chat_id, "Токен обновлён, повторите команду.")
+                    bot.send_message(chat_id, "Токен обновлён, повторите команду.", reply_markup=habits_commands())
                 else:
-                    bot.send_message(chat_id, "Ошибка авторизации, попробуйте позже.")
+                    bot.send_message(chat_id, "Ошибка авторизации, попробуйте позже.", reply_markup=habits_commands())
                 return
 
             if response.status_code == 200:
@@ -105,6 +105,6 @@ def callback_mark_habit(call):
                 bot.send_message(chat_id, "Список привычек без отметок о выполнении за сегодня:",
                                  reply_markup=habit_list_inline(data, "unmarkedlist"))
             else:
-                bot.send_message(chat_id, "Ошибка при выполнении запроса.")
+                bot.send_message(chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands())
     else:
-        bot.send_message(chat_id, "Ошибка при выполнении запроса.")
+        bot.send_message(chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands())

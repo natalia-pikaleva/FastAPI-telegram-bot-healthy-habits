@@ -1,11 +1,7 @@
-import logging
-from fastapi import Depends
+from ...keyboards.reply.core import habits_commands
 from telebot.types import Message
 from ...setup import bot
-from database.db_init import SessionLocal
-from database.db_utils import get_user_by_chat_id
-import requests
-from config import setup_logging, API_HOST
+from config import setup_logging
 import logging
 
 setup_logging()
@@ -17,4 +13,6 @@ def bot_help(message: Message) -> None:
     """
     Функция получает на входе команду help и возвращает пользователю справку
     """
-    bot.send_message(chat_id=message.chat.id, text="Справка о работе бота")
+    bot.send_message(chat_id=message.chat.id, text="Справка о работе бота", reply_markup=habits_commands())
+
+    # TODO написать информацию о работе бота
