@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 @bot.message_handler(commands=["help"])
-@bot.message_handler(func=lambda message: message.text == "Обо мне")
+@bot.message_handler(func=lambda message: message.text == "😊 Обо мне")
 def bot_help(message: Message) -> None:
     """
     Функция получает на входе команду help и возвращает пользователю справку

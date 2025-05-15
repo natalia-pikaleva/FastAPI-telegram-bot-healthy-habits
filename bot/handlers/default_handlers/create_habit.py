@@ -18,7 +18,7 @@ user_data = defaultdict(dict)
 
 
 @bot.message_handler(commands=["create_habit"])
-@bot.message_handler(func=lambda message: message.text == "Создать новую привычку")
+@bot.message_handler(func=lambda message: message.text == "✍️ Создать новую привычку")
 def bot_create_habit(message: Message) -> None:
     """
     Хендлер для создания новой привычки

@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 @bot.message_handler(commands=["habits_list"])
-@bot.message_handler(func=lambda message: message.text == "Список всех привычек")
+@bot.message_handler(func=lambda message: message.text == "📋 Список всех привычек")
 def bot_get_habits(message: Message) -> None:
     """
     Хендлер для просмотра всех привычек
