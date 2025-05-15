@@ -28,17 +28,20 @@ def callback_update_title(call):
 
     msg = bot.send_message(chat_id, "Вы хотите изменить название привычки? Введите новое название привычки", reply_markup=confirmation_of_habit_update_inline())
     bot.register_next_step_handler(msg, process_title_update)
-    # TODO сделать так, чтобы при отмене не сохранялось ничего
 
 
 def process_title_update(message):
     chat_id = message.chat.id
+
+    # Если пользователь нажал Отмена, id пользователя не будет в словаре
+    if not chat_id in user_selected_habit:
+        bot.send_message(chat_id, "Пожалуйста, повторите команду", reply_markup=habits_commands())
+
     with SessionLocal() as db:
         token = get_token_for_user(db, chat_id)
     if not token:
         bot.send_message(chat_id, "Пожалуйста, авторизуйтесь через /start", reply_markup=habits_commands())
         return
-    bot.send_message(chat_id, f"Новое название: {message.text}")
 
     # Формируем данные для отправки на FastAPI
     habit_payload = {
@@ -108,6 +111,6 @@ def callback_update_start_at(call):
 @bot.callback_query_handler(func=lambda call: call.data.startswith('cancel_update'))
 def callback_cancel(call):
     chat_id = call.from_user.id
-    user_selected_habit[chat_id] = {}
+    del user_selected_habit[chat_id]
 
     bot.send_message(chat_id, "Изменение отменено", reply_markup=habits_commands())

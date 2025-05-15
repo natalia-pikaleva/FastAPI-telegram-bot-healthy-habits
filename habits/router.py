@@ -139,8 +139,13 @@ def update_habit(
     db.commit()
     db.refresh(db_habit)
 
+    response = HabitResponse.from_orm(db_habit)
+    if response.repeat_period == "daily":
+        response.repeat_period = "Ежедневно"
+    else:
+        response.repeat_period = "Еженедельно"
 
-    return db_habit
+    return response
 
 
 @router.delete("/{habit_id}/delete", status_code=status.HTTP_200_OK)
@@ -233,6 +238,11 @@ def get_habit(
         .first()
     )
     response = HabitResponse.from_orm(habit)
+    if response.repeat_period == "daily":
+        response.repeat_period = "Ежедневно"
+    else:
+        response.repeat_period = "Еженедельно"
+
     response.today_mark = today_mark
     reminder = db.query(Reminder).filter(Reminder.habit_id == habit.id).first()
     if reminder:

@@ -47,6 +47,11 @@ def bot_get_habits(message: Message) -> None:
     if response.status_code == 200:
         data = response.json()
         # Обработка успешного ответа
-        bot.send_message(chat_id, "Список ваших привычек (с отметками о выполнении за сегодня):", reply_markup=habit_list_inline(data, "list"))
+        if len(data) > 0:
+            bot.send_message(chat_id, "Список ваших привычек (с отметками о выполнении за сегодня):", reply_markup=habit_list_inline(data, "list"))
+        else:
+            bot.send_message(chat_id, "Похоже, вы не создали ни одной привычки, самое время начать!", reply_markup=habit_list_inline(data, "list"))
+
+
     else:
         bot.send_message(chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands())

@@ -1,5 +1,5 @@
 from datetime import date
-from sqlalchemy import Column, Integer, String, ForeignKey, Date, UniqueConstraint, Time
+from sqlalchemy import Column, Integer, BigInteger, String, ForeignKey, Date, UniqueConstraint, Time
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
@@ -9,7 +9,7 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    telegram_id = Column(Integer, unique=True, nullable=False, index=True)
+    telegram_id = Column(BigInteger, unique=True, nullable=False, index=True)
     username = Column(String(100), index=True, unique=True)
     first_name = Column(String(100), index=True)
     last_name = Column(String(100), index=True)
@@ -91,6 +91,6 @@ class Reminder(Base):
     habit_id = Column(Integer, ForeignKey("habits.id"), nullable=False, index=True)
     time = Column(Time)
     timezone = Column(String(50))
-    chat_id = Column(Integer)
+    chat_id = Column(BigInteger)
 
     habit = relationship("Habit", back_populates="reminder", lazy="selectin")
