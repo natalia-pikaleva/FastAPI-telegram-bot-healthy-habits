@@ -45,8 +45,12 @@ def bot_get_statistics(message: Message) -> None:
     if response.status_code == 200:
         data = response.json()
         # Обработка успешного ответа
-        bot.send_message(chat_id, "Статистика за последнюю неделю:",
+        if len(data) > 0:
+            bot.send_message(chat_id, "Статистика за последнюю неделю:",
                          reply_markup=statistics_habit_list_inline(data))
+        else:
+            bot.send_message(chat_id, "Похоже, вы не создали ни одной привычки. Самое время начать!", reply_markup=habits_commands())
+
     else:
         bot.send_message(chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands())
 

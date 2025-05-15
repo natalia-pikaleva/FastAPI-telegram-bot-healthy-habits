@@ -45,7 +45,7 @@ def bot_get_unmarked_habits(message: Message) -> None:
     if response.status_code == 200:
         data = response.json()
         # Обработка успешного ответа
-        if data == []:
+        if len(data) == 0:
             bot.send_message(chat_id, "За сегодня все привычки выполнены! Так держать!", reply_markup=habits_commands())
 
         else:

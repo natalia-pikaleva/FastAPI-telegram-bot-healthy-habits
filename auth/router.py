@@ -32,7 +32,6 @@ def auth(auth_req: AuthRequest, db: Session = Depends(get_db)):
             db.add(user)
             db.commit()
             db.refresh(user)
-            # TODO для нового пользователя поставить время напоминания по умолчанию
         except SQLAlchemyError as e:
             db.rollback()
             logger.error(f"Error creating user: {e}")
