@@ -121,10 +121,22 @@ def confirmation_of_habit_deletion_inline():
     )
     btn2 = types.InlineKeyboardButton(
         text="Отмена",
-        callback_data="cancel"
+        callback_data="cancel_delete"
     )
 
     markup.add(*[btn1, btn2])
+    return markup
+
+
+def confirmation_of_habit_update_inline():
+    markup = types.InlineKeyboardMarkup(row_width=1)
+
+    btn = types.InlineKeyboardButton(
+        text="Отмена",
+        callback_data="cancel_update"
+    )
+
+    markup.add(btn)
     return markup
 
 
@@ -140,4 +152,25 @@ def mark_habit(habit_id):
     )
 
     markup.add(*[btn1, btn2])
+    return markup
+
+
+def statistics_habit_list_inline(data):
+    markup = types.InlineKeyboardMarkup(row_width=2)
+    buttons = []
+    for habit in data:
+        btn1 = types.InlineKeyboardButton(
+            text=f"{habit["title"]}",
+            callback_data=f"habitstatistics_{habit['id']}"
+        )
+
+        btn2 = types.InlineKeyboardButton(
+            text=habit["week"],
+            callback_data=f"habit_{habit['id']}"
+        )
+
+        buttons.append(btn1)
+        buttons.append(btn2)
+
+    markup.add(*buttons)
     return markup

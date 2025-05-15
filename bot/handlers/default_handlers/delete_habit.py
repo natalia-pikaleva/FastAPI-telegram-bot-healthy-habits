@@ -32,7 +32,7 @@ def callback_delete_habit_second_step(call):
     with SessionLocal() as db:
         token = get_token_for_user(db, chat_id)
     if not token:
-        bot.send_message(chat_id, "Пожалуйста, авторизуйтесь через /start")
+        bot.send_message(chat_id, "Пожалуйста, авторизуйтесь через /start", reply_markup=habits_commands())
         return
 
     habit_id = user_selected_habit[chat_id]["habit_id"]
@@ -48,20 +48,21 @@ def callback_delete_habit_second_step(call):
         )
         if auth_response.status_code == 200:
             new_token = auth_response.json().get("access_token")
-            bot.send_message(chat_id, "Токен обновлён, повторите команду.")
+            bot.send_message(chat_id, "Токен обновлён, повторите команду.", reply_markup=habits_commands())
         else:
-            bot.send_message(chat_id, "Ошибка авторизации, попробуйте позже.")
+            bot.send_message(chat_id, "Ошибка авторизации, попробуйте позже.", reply_markup=habits_commands())
         return
 
     if response.status_code == 200:
         # Обработка успешного ответа
         bot.send_message(chat_id, "Привычка удалена", reply_markup=habits_commands())
     else:
-        bot.send_message(chat_id, "Ошибка при выполнении запроса.")
+        bot.send_message(chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands())
 
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith('cancel'))
+@bot.callback_query_handler(func=lambda call: call.data.startswith('cancel_delete'))
 def callback_cancel(call):
     chat_id = call.from_user.id
+    user_selected_habit[chat_id] = {}
 
-    bot.send_message(chat_id, "Хорошо", reply_markup=habits_commands())
+    bot.send_message(chat_id, "Удаление отменено", reply_markup=habits_commands())

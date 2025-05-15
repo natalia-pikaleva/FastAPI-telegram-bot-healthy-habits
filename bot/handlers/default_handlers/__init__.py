@@ -10,3 +10,4 @@ from . import set_repeat_period
 from . import mark_habit
 from . import set_reminder
 from . import get_unmarked_habits
+from . import statistics

@@ -27,7 +27,6 @@ def bot_set_reminder_to_habit(call):
 
     habit_id = int(call.data.split('_')[1])
     user_selected_habit[chat_id]["habit_id"] = habit_id
-    bot.send_message(chat_id, f"Записала id привычки: {user_selected_habit[chat_id]["habit_id"]}")
 
     bot.send_message(chat_id, "Выберите удобное время для напоминаний", reply_markup=hours_inline())
 
@@ -39,7 +38,6 @@ def handle_set_hour_callback(call):
     chat_id = call.from_user.id
 
     user_data[chat_id]["hour"] = f"{hour:02d}:00"
-    bot.send_message(chat_id, f"Записала время: {user_data[chat_id]["hour"]}")
 
 
     bot.send_message(chat_id, "Выберите ваш часовой пояс", reply_markup=timezone_inline())
@@ -57,7 +55,7 @@ def handle_set_timezone_callback(call):
     with SessionLocal() as db:
         token = get_token_for_user(db, chat_id)
     if not token:
-        bot.send_message(chat_id, "Пожалуйста, авторизуйтесь через /start")
+        bot.send_message(chat_id, "Пожалуйста, авторизуйтесь через /start", reply_markup=habits_commands())
         return
 
     # Формируем данные для отправки на FastAPI
@@ -66,11 +64,9 @@ def handle_set_timezone_callback(call):
         "time": user_data[chat_id]['hour'],  # строка формата "08:00"
         "timezone": timezone,
     }
-    bot.send_message(chat_id, f"Получаю id привычки из словаря")
 
     habit_id = user_selected_habit[chat_id]["habit_id"]
 
-    bot.send_message(chat_id, f"id привычки {habit_id}")
 
 
     headers = {"Authorization": f"Bearer {token}"}
@@ -84,9 +80,9 @@ def handle_set_timezone_callback(call):
         )
         if auth_response.status_code == 200:
             new_token = auth_response.json().get("access_token")
-            bot.send_message(chat_id, "Токен обновлён, повторите команду.")
+            bot.send_message(chat_id, "Токен обновлён, повторите команду.", reply_markup=habits_commands())
         else:
-            bot.send_message(chat_id, "Ошибка авторизации, попробуйте позже.")
+            bot.send_message(chat_id, "Ошибка авторизации, попробуйте позже.", reply_markup=habits_commands())
         return
 
     if response.status_code == 200:
@@ -94,4 +90,4 @@ def handle_set_timezone_callback(call):
         bot.send_message(chat_id, f"Время напоминания установлено: {user_data[chat_id]['hour']}",
                          reply_markup=habits_commands())
     else:
-        bot.send_message(chat_id, "Ошибка при выполнении запроса.")
+        bot.send_message(chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands())
