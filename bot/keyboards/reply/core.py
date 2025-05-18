@@ -8,8 +8,8 @@ def habits_commands():
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     btn1 = types.KeyboardButton("😊 Обо мне")
     btn2 = types.KeyboardButton("📈 Статистика")
-    btn3 = types.KeyboardButton("📋 Список всех привычек")
-    btn4 = types.KeyboardButton("⚪️ Список привычек без отметки")
+    btn3 = types.KeyboardButton("📋 Все привычки")
+    btn4 = types.KeyboardButton("⚪️ Привычки без отметки")
     btn5 = types.KeyboardButton("✍️ Создать новую привычку")
 
     markup.add(btn1, btn2, btn3, btn4, btn5)
