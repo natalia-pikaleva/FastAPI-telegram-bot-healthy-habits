@@ -86,8 +86,8 @@ def handle_statistics_habit_callback(call):
     if response.status_code == 200:
         data = response.json()
         # Обработка успешного ответа
-        bot.send_message(chat_id, f"Статистика за 21 день - привычка {data["title"]}", reply_markup=habits_commands())
-        bot.send_message(chat_id, f"{data["tracker"]}", reply_markup=habits_commands())
+        bot.send_message(chat_id, f"Статистика за 21 день - привычка {data['title']}", reply_markup=habits_commands())
+        bot.send_message(chat_id, f"{data['tracker']}", reply_markup=habits_commands())
 
     else:
         bot.send_message(chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands())

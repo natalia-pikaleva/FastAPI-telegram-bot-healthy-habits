@@ -39,6 +39,11 @@ def create_habit(
     response = HabitResponse.from_orm(new_habit)
     response.today_mark = None
     response.reminder_time = None
+
+    if response.repeat_period == "daily":
+        response.repeat_period = "Ежедневно"
+    else:
+        response.repeat_period = "Еженедельно"
     return response
 
 
@@ -247,6 +252,7 @@ def get_habit(
     reminder = db.query(Reminder).filter(Reminder.habit_id == habit.id).first()
     if reminder:
         response.reminder_time = reminder.time
+
     return response
 
 

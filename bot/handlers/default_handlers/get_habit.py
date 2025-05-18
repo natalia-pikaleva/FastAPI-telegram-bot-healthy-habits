@@ -22,8 +22,6 @@ def handle_habit_callback(call):
     chat_id = call.from_user.id
     user_selected_habit[chat_id]["habit_id"] = habit_id
 
-    bot.send_message(chat_id, f"Добавила id привычки в словарь: {user_selected_habit[chat_id]["habit_id"]}")
-
     with SessionLocal() as db:
         token = get_token_for_user(db, chat_id)
     if not token:
