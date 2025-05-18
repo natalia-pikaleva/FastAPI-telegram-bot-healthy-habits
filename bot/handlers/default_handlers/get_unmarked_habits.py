@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 @bot.message_handler(commands=["unmarked_habits"])
-@bot.message_handler(func=lambda message: message.text == "⚪️ Список привычек без отметки")
+@bot.message_handler(func=lambda message: message.text == "⚪️ Привычки без отметки")
 def bot_get_unmarked_habits(message: Message) -> None:
     """
     Хендлер для получения списка не выполненных привычек
