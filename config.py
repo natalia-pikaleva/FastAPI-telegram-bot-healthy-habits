@@ -12,7 +12,7 @@ DB_USER = os.getenv("DB_USER", )
 DB_PASSWORD = os.getenv("DB_PASSWORD", )
 DB_NAME = os.getenv("DB_NAME", )
 API_HOST = os.getenv("API_HOST", "127.0.0.1")
-DB_HOST = "localhost"
+DB_HOST = os.getenv("DB_HOST", "127.0.0.1")
 
 if not find_dotenv():
     exit("Переменные окружения не загружены т.к отсутствует файл .env")

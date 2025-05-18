@@ -24,8 +24,6 @@ user_selected_fields = defaultdict(set)
 def callback_update_title(call):
     chat_id = call.from_user.id
 
-    bot.send_message(chat_id, f"Нажала на название привычки, id привычки в словаре: {user_selected_habit[chat_id]["habit_id"]}")
-
     if chat_id not in user_selected_habit:
         bot.send_message(chat_id, "Выберите привычку из списка", reply_markup=habits_commands())
 
@@ -50,8 +48,6 @@ def process_title_update(message):
     habit_payload = {
         "title": message.text,
     }
-
-    bot.send_message(chat_id, f"Пробую изменить название привычки, беру id привычки в словаре: {user_selected_habit[chat_id]["habit_id"]}")
 
     habit_id = user_selected_habit[chat_id]["habit_id"]
 

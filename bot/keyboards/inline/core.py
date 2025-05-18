@@ -160,7 +160,7 @@ def statistics_habit_list_inline(data):
     buttons = []
     for habit in data:
         btn1 = types.InlineKeyboardButton(
-            text=f"{habit["title"]}",
+            text=habit["title"],
             callback_data=f"habitstatistics_{habit['id']}"
         )
 
