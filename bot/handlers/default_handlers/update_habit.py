@@ -69,6 +69,10 @@ def process_title_update(message):
 
     if response.status_code == 200:
         data = response.json()
+
+        # Очистка данных пользователя
+        user_data.pop(chat_id, None)
+
         # Обработка успешного ответа
         bot.send_message(chat_id, "Привычка успешно обновлена", reply_markup=habit_fields_inline(data, "one"))
     else:

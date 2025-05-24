@@ -6,7 +6,7 @@ from bot.setup import bot
 from datetime import datetime, timezone
 from database.models import Reminder, Habit, HabitTracker
 import pytz
-from sqlalchemy import and_
+from sqlalchemy import and_, or_, exists, not_, select
 
 from bot.keyboards.inline.core import mark_habit
 
@@ -20,6 +20,9 @@ def send_reminders():
         now_utc = datetime.now(timezone.utc)
         reminders = db.query(Reminder).all()
 
+        today = date.today()
+        day_index = today.weekday()
+
         for reminder in reminders:
             user_tz = pytz.timezone(reminder.timezone)
             now_local = now_utc.astimezone(user_tz).time().replace(second=0, microsecond=0)
@@ -27,17 +30,26 @@ def send_reminders():
 
             if now_local == reminder_time:
                 habit = (db.query(Habit)
-                         .outerjoin(HabitTracker,
-                                    and_(Habit.id == HabitTracker.habit_id,
-                                         HabitTracker.date_mark == date.today()))
                          .filter(Habit.id == reminder.habit_id,
-                                 HabitTracker.date_mark.is_(None)).first())
+                                 not_(Habit.id.in_(
+                                     select(HabitTracker.habit_id)
+                                     .where(HabitTracker.date_mark == today)
+                                 )),
+                                 or_(
+                                     Habit.repeat_period == "daily",
+                                     and_(Habit.repeat_period == "weekly",
+                                          Habit.week_days.any(day_index))
+                                 )
+                            )
+                         .first())
 
                 if not habit is None:
                     bot.send_message(
                         chat_id=reminder.chat_id,
                         text=f"⏰ Напоминание: пора выполнить привычку {habit.title}"
                     )
+
+
                     bot.send_message(
                         chat_id=reminder.chat_id,
                         text=f"Поставить отметку о выполнении?",

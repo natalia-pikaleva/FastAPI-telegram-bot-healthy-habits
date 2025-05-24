@@ -1,4 +1,5 @@
-from ...keyboards.inline.core import habit_fields_inline, set_repeat_period_inline
+from ...keyboards.inline.core import (habit_fields_inline, set_repeat_period_inline,
+                                      choose_week_days_inline)
 from ...keyboards.reply.core import habits_commands
 from ...setup import bot
 from database.db_init import SessionLocal
@@ -18,8 +19,8 @@ calendar = Calendar(language=RUSSIAN_LANGUAGE)
 calendar_1 = CallbackData('calendar_1', 'action', 'year', 'month', 'day')
 
 
-@bot.callback_query_handler(func=lambda call: call.data in ["daily", "weekly"])
-def callback_choose_repeat_period(call):
+@bot.callback_query_handler(func=lambda call: call.data in ["daily"])
+def callback_choose_repeat_period_daily(call):
     chat_id = call.from_user.id
 
     # Если пользователь на данный момент редактирует ранее созданную привычку,
@@ -34,7 +35,6 @@ def callback_choose_repeat_period(call):
 
         habit_id = user_selected_habit[chat_id]["habit_id"]
 
-        # Отправка POST-запроса на ваш FastAPI сервер
         with SessionLocal() as db:
             token = get_token_for_user(db, chat_id)
         if not token:
@@ -69,6 +69,101 @@ def callback_choose_repeat_period(call):
     # фиксируем в словаре периодичность и направляем на следующий этап - выбор даты начала
     if user_data[chat_id]["action"] == "create":
         user_data[chat_id]['repeat_period'] = call.data
+        now = datetime.datetime.now()
+        markup = calendar.create_calendar(name=calendar_1.prefix, year=now.year, month=now.month)
+        bot.send_message(chat_id, "Выберите дату:", reply_markup=markup)
+
+
+@bot.callback_query_handler(func=lambda call: call.data == "weekly")
+def callback_choose_period_weekly(call):
+    chat_id = call.from_user.id
+
+    user_data[chat_id]["action"] = "update"
+    if not "week_days" in user_data[chat_id]:
+        user_data[chat_id]["week_days"] = []
+
+    data = user_data[chat_id]["week_days"]
+    bot.send_message(chat_id, "Выберите дни недели", reply_markup=choose_week_days_inline(data))
+
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith('weekday_'))
+def callback_choose_week_days(call):
+    chat_id = call.from_user.id
+    day = int(call.data.split('_')[1])
+
+    if not "week_days" in user_data[chat_id]:
+        user_data[chat_id]["week_days"] = []
+
+    if day in user_data[chat_id]["week_days"]:
+        user_data[chat_id]["week_days"].remove(day)
+    else:
+        user_data[chat_id]["week_days"].append(day)
+
+    data = user_data[chat_id]["week_days"]
+    bot.send_message(chat_id, "Выберите дни недели", reply_markup=choose_week_days_inline(data))
+
+
+@bot.callback_query_handler(func=lambda call: call.data == "choose_week_days")
+def callback_set_week_days(call):
+    chat_id = call.from_user.id
+
+    if not "week_days" in user_data[chat_id] or user_data[chat_id]["week_days"] == []:
+        bot.send_message(chat_id, "Выберите хотя бы один день недели и нажмите Далее",
+                         reply_markup=choose_week_days_inline([]))
+
+    week_days = sorted(user_data[chat_id]["week_days"])
+
+    # Если пользователь на данный момент редактирует ранее созданную привычку,
+    # делаем запрос на изменение, возвращаем пользователю измененную привычку
+    if user_data[chat_id]["action"] == "update":
+        if chat_id not in user_selected_habit:
+            bot.send_message(chat_id, "Выберите привычку из списка", reply_markup=habits_commands())
+        # Формируем данные для отправки на FastAPI
+        habit_payload = {
+            "repeat_period": "weekly",
+            "week_days": week_days
+        }
+
+        habit_id = user_selected_habit[chat_id]["habit_id"]
+
+        with SessionLocal() as db:
+            token = get_token_for_user(db, chat_id)
+        if not token:
+            bot.send_message(chat_id, "Пожалуйста, авторизуйтесь через /start", reply_markup=habits_commands())
+            return
+
+        headers = {"Authorization": f"Bearer {token}"}
+        response = requests.post(f"http://{API_HOST}:8000/habits/{habit_id}/update", json=habit_payload,
+                                 headers=headers)
+
+        if response.status_code == 401:
+            # Токен истёк или недействителен, пробуем получить новый
+            auth_response = requests.post(
+                f"http://{API_HOST}:8000/auth/login",
+                json={"telegram_id": chat_id}
+            )
+            if auth_response.status_code == 200:
+                new_token = auth_response.json().get("access_token")
+                bot.send_message(chat_id, "Токен обновлён, повторите команду.", reply_markup=habits_commands())
+            else:
+                bot.send_message(chat_id, "Ошибка авторизации, попробуйте позже.", reply_markup=habits_commands())
+            return
+
+        if response.status_code == 200:
+            data = response.json()
+
+            # Очистка данных пользователя
+            user_data.pop(chat_id, None)
+
+            # Обработка успешного ответа
+            bot.send_message(chat_id, "Привычка успешно обновлена", reply_markup=habit_fields_inline(data, ""))
+        else:
+            bot.send_message(chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands())
+
+    # Если пользователь на данный момент создает новую привычку,
+    # фиксируем в словаре периодичность и направляем на следующий этап - выбор даты начала
+    if user_data[chat_id]["action"] == "create":
+        user_data[chat_id]['repeat_period'] = "weekly"
         now = datetime.datetime.now()
         markup = calendar.create_calendar(name=calendar_1.prefix, year=now.year, month=now.month)
         bot.send_message(chat_id, "Выберите дату:", reply_markup=markup)
