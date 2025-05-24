@@ -1,5 +1,5 @@
 from datetime import date
-from sqlalchemy import Column, Integer, BigInteger, String, ForeignKey, Date, UniqueConstraint, Time
+from sqlalchemy import Column, Integer, BigInteger, String, ForeignKey, Date, UniqueConstraint, Time, ARRAY
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
@@ -41,6 +41,7 @@ class Habit(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     title = Column(String(200), index=True)
     repeat_period = Column(String(100), index=True)
+    week_days = Column(ARRAY(Integer))
     start_at = Column(Date, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
 

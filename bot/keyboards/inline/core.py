@@ -1,5 +1,16 @@
 from telebot import types
 
+field_names_dict = {"title": "Название",
+                    "repeat_period": "Периодичность",
+                    "start_at": "Дата начала"}
+
+week_days = {0: "пн",
+             1: "вт",
+             2: "ср",
+             3: "чт",
+             4: "пт",
+             5: "сб",
+             6: "вс"}
 
 def habit_list_inline(data, type_answer):
     markup = types.InlineKeyboardMarkup(row_width=2)
@@ -26,15 +37,10 @@ def habit_list_inline(data, type_answer):
     return markup
 
 
-field_names_dict = {"title": "Название",
-                    "repeat_period": "Периодичность",
-                    "start_at": "Дата начала"}
-
-
 def habit_fields_inline(data, type_answer):
     markup = types.InlineKeyboardMarkup(row_width=1)
     for field, value in data.items():
-        if not field in ["id", "today_mark", "reminder_time"]:
+        if not field in ["id", "today_mark", "reminder_time", "week_days"]:
             if field == "start_at":
                 value = value.split('T')[0]
             btn = types.InlineKeyboardButton(
@@ -42,6 +48,13 @@ def habit_fields_inline(data, type_answer):
                 callback_data=field
             )
             markup.add(btn)
+    if data.get("week_days") is not None:
+        week_days_str = " ".join([week_days[day] for day in data["week_days"]])
+        btn = types.InlineKeyboardButton(
+            text=f"Дни недели: {week_days_str}",
+            callback_data="weekly"
+        )
+        markup.add(btn)
     if data["today_mark"]:
         btn1 = types.InlineKeyboardButton(
             text=f"✅ Сегодня привычка выполнена",
@@ -49,7 +62,7 @@ def habit_fields_inline(data, type_answer):
         )
     else:
         btn1 = types.InlineKeyboardButton(
-            text=f"🔲 Привычка еще не выполнена",
+            text=f"🔲 Привычка сегодня не выполнена",
             callback_data=f"mark_{data['id']}_{type_answer}"
         )
     if data.get("reminder_time") is not None:
@@ -172,5 +185,30 @@ def statistics_habit_list_inline(data):
         buttons.append(btn1)
         buttons.append(btn2)
 
+    markup.add(*buttons)
+    return markup
+
+
+def choose_week_days_inline(data):
+    markup = types.InlineKeyboardMarkup(row_width=2)
+
+    buttons = []
+    for day in range(7):
+        if day in data:
+            btn = types.InlineKeyboardButton(
+                text=f"✅ {week_days[day]}",
+                callback_data=f"weekday_{day}"
+            )
+        else:
+            btn = types.InlineKeyboardButton(
+                text=f"{week_days[day]}",
+                callback_data=f"weekday_{day}"
+            )
+        buttons.append(btn)
+    btn = types.InlineKeyboardButton(
+        text="Далее",
+        callback_data="choose_week_days"
+    )
+    buttons.append(btn)
     markup.add(*buttons)
     return markup

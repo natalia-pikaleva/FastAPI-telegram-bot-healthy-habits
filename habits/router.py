@@ -2,7 +2,7 @@ from collections import defaultdict
 import datetime
 from database.db_init import get_db
 from database.models import User, Habit, HabitTracker, Reminder
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, or_, not_
 from sqlalchemy.orm import Session, joinedload, aliased
 from .schemas import HabitResponse, HabitCreateRequest, HabitUpdateRequest, ReminderUpdateRequest, \
     UnmarkedHabitResponse, HabitTrackerResponse
@@ -29,6 +29,7 @@ def create_habit(
     new_habit = Habit(
         title=habit.title,
         repeat_period=habit.repeat_period,
+        week_days=habit.week_days,
         start_at=habit.start_at,
         user_id=current_user.id
     )
@@ -53,13 +54,26 @@ def get_unmarked_habits_list(
         current_user: Any = Depends(get_current_user),
 ):
     try:
-        subq = select(HabitTracker.habit_id).where(HabitTracker.date_mark == date.today()).subquery()
+        day_index = date.today().weekday()
 
-        habits = db.query(Habit).filter(Habit.user_id == current_user.id,
-                                        ~Habit.id.in_(subq)).options(
+        # Выбираем привычки пользователя без отметок за сегодня, ежедневные или еженедельные,
+        # у которых установлен текущий день недели
+        habits = (db.query(Habit)
+                  .filter(Habit.user_id == current_user.id,
+                          not_(Habit.id.in_(
+                              select(HabitTracker.habit_id)
+                              .where(HabitTracker.date_mark == date.today())
+                          )),
+                          or_(
+                              Habit.repeat_period == "daily",
+                              and_(Habit.repeat_period == "weekly",
+                                   Habit.week_days.any(day_index))
+                          )
+                          )
+                  .options(
             joinedload(Habit.dates),
             joinedload(Habit.reminder)
-        ).all()
+        ).all())
 
         logger.error(f"habits: {habits}")
 
@@ -90,7 +104,10 @@ def get_statistics_habit_list(
             data["id"] = habit.id
             data["title"] = habit.title
             data["marked_days"] = [tracked.date_mark for tracked in habit.dates if tracked.date_mark > date_7_start]
-            data["week"] = ''.join(['✅' if tracked in set(data["marked_days"]) else '⚪️' for tracked in dates_week])
+
+            data["week"] = ''.join(['✅' if tracked in set(data["marked_days"])
+                                    else '⚪️' for tracked in dates_week])
+
             response.append(data)
 
         return response
@@ -138,6 +155,8 @@ def update_habit(
         db_habit.title = habit.title
     if habit.repeat_period:
         db_habit.repeat_period = habit.repeat_period
+    if habit.week_days:
+        db_habit.week_days = habit.week_days
     if habit.start_at:
         db_habit.start_at = habit.start_at
 
