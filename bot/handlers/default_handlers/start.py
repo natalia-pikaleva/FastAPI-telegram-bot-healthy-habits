@@ -1,5 +1,3 @@
-import logging
-from fastapi import Depends
 from telebot.types import Message
 from ...setup import bot
 from database.db_init import SessionLocal
@@ -20,6 +18,7 @@ def bot_start(message: Message) -> None:
     """
     logger.info("Start bot_start")
     chat_id = message.chat.id
+
     with SessionLocal() as db:
         user = get_user_by_chat_id(db, chat_id)
         if not user:
@@ -29,8 +28,16 @@ def bot_start(message: Message) -> None:
             )
             if response.status_code == 200:
                 token = response.json().get("access_token")
-                bot.send_message(chat_id=chat_id, text="Вы успешно авторизованы!", reply_markup=habits_commands())
+                bot.send_message(chat_id=chat_id,
+                                 text="Вы успешно авторизованы!",
+                                 reply_markup=habits_commands())
             else:
-                bot.send_message(chat_id=chat_id, text="Ошибка аутентификации. Попробуйте позже.", reply_markup=habits_commands())
+                bot.send_message(chat_id=chat_id,
+                                 text="Ошибка аутентификации. Попробуйте позже.",
+                                 reply_markup=habits_commands())
         else:
-            bot.send_message(chat_id=chat_id, text="Прекрасный день, чтобы начать формировать новую привычку! Нажми Создать новую привычку или выбери привычку из ранее созданного списка", reply_markup=habits_commands())
+            bot.send_message(
+                chat_id=chat_id,
+                text="Прекрасный день, чтобы начать формировать новую привычку! "
+                     "Нажми Создать новую привычку или выбери привычку из ранее созданного списка",
+                reply_markup=habits_commands())

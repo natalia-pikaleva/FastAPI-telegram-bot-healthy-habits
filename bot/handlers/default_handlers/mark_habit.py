@@ -1,4 +1,4 @@
-from ...keyboards.inline.core import habit_fields_inline, set_repeat_period_inline, habit_list_inline
+from ...keyboards.inline.core import habit_fields_inline, habit_list_inline
 from ...keyboards.reply.core import habits_commands
 from ...setup import bot
 from database.db_init import SessionLocal
@@ -6,11 +6,6 @@ from database.db_utils import get_token_for_user
 import requests
 from config import setup_logging, API_HOST
 import logging
-from collections import defaultdict
-from telebot_calendar import Calendar, CallbackData, RUSSIAN_LANGUAGE
-import datetime
-from .get_habit import user_selected_habit
-from .create_habit import user_data
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -49,12 +44,14 @@ def callback_mark_habit(call):
 
     if response.status_code == 200:
 
-        if type_answer == "one": # если тип ответа one  - надо вернуть пользователю информацию об одной привычке
+        if type_answer == "one":  # если тип ответа one - надо вернуть пользователю информацию об одной привычке
             data = response.json()
             # Обработка успешного ответа
-            bot.send_message(chat_id, "Отметка о выполнении проставлена/снята", reply_markup=habit_fields_inline(data, "one"))
+            bot.send_message(chat_id,
+                             "Отметка о выполнении проставлена/снята",
+                             reply_markup=habit_fields_inline(data, "one"))
 
-        elif type_answer == "list": # если тип ответа list - надо вернуть пользователю список всех привычек
+        elif type_answer == "list":  # если тип ответа list - надо вернуть пользователю список всех привычек
             headers = {"Authorization": f"Bearer {token}"}
             response = requests.get(f"http://{API_HOST}:8000/habits", headers=headers)
             logger.debug(f'Headers: {response.request.headers}')

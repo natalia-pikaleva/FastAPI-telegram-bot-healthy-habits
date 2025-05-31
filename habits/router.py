@@ -26,27 +26,29 @@ def create_habit(
         db: Session = Depends(get_db)
 ):
     logger.debug("Start create_habit")
-    new_habit = Habit(
-        title=habit.title,
-        repeat_period=habit.repeat_period,
-        week_days=habit.week_days,
-        start_at=habit.start_at,
-        user_id=current_user.id
-    )
-    db.add(new_habit)
-    db.commit()
-    db.refresh(new_habit)
+    try:
+        new_habit = Habit(
+            title=habit.title,
+            repeat_period=habit.repeat_period,
+            week_days=habit.week_days,
+            start_at=habit.start_at,
+            user_id=current_user.id
+        )
+        db.add(new_habit)
+        db.commit()
+        db.refresh(new_habit)
 
-    response = HabitResponse.from_orm(new_habit)
-    response.today_mark = None
-    response.reminder_time = None
+        response = HabitResponse.from_orm(new_habit)
+        response.today_mark = None
+        response.reminder_time = None
 
-    if response.repeat_period == "daily":
-        response.repeat_period = "Ежедневно"
-    else:
-        response.repeat_period = "Еженедельно"
-    return response
-
+        if response.repeat_period == "daily":
+            response.repeat_period = "Ежедневно"
+        else:
+            response.repeat_period = "Еженедельно"
+        return response
+    except Exception as e:
+        logger.error("error during create habit %s", e)
 
 @router.get("/unmarked", response_model=List[UnmarkedHabitResponse])
 def get_unmarked_habits_list(
