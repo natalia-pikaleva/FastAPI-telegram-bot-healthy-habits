@@ -8,6 +8,7 @@ pyTelegrambotAPI==4.27.0
 python-dotenv==1.1.0
 python-jose==3.4.0
 pytz==2025.2
+redis==6.1.0
 SQLAlchemy==2.0.40
 telebot_calendar==1.2
 uvicorn==0.34.2

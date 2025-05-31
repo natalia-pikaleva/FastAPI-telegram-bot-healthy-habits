@@ -1,17 +1,15 @@
-from ...keyboards.inline.core import (habit_fields_inline, set_repeat_period_inline,
+import json
+from ...keyboards.inline.core import (habit_fields_inline,
                                       choose_week_days_inline)
 from ...keyboards.reply.core import habits_commands
 from ...setup import bot
 from database.db_init import SessionLocal
 from database.db_utils import get_token_for_user
 import requests
-from config import setup_logging, API_HOST
+from config import setup_logging, API_HOST, redis_client as redis
 import logging
-from collections import defaultdict
 from telebot_calendar import Calendar, CallbackData, RUSSIAN_LANGUAGE
 import datetime
-from .get_habit import user_selected_habit
-from .create_habit import user_data
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -19,26 +17,39 @@ calendar = Calendar(language=RUSSIAN_LANGUAGE)
 calendar_1 = CallbackData('calendar_1', 'action', 'year', 'month', 'day')
 
 
-@bot.callback_query_handler(func=lambda call: call.data in ["daily"])
+@bot.callback_query_handler(func=lambda call: call.data == "daily")
 def callback_choose_repeat_period_daily(call):
+    """
+    Пользователь выбрал периодичность привычки Ежедневно.
+    Если на данный момент пользователь редактирует привычку, направляем запрос
+    на эндпоинт, если создает новую привычку, сохраняем периодичность и направляем на следующий шаг
+    """
     chat_id = call.from_user.id
 
-    # Если пользователь на данный момент редактирует ранее созданную привычку,
-    # делаем запрос на изменение, возвращаем пользователю измененную привычку
-    if user_data[chat_id]["action"] == "update":
-        if chat_id not in user_selected_habit:
+    # Проверяем действие на данный момент: если действие не создать новую привычку,
+    # значит пользователь редактирует ранее созданную, устанавливаем поле действия update
+    action = redis.hget(f"data_chat_id:{chat_id}", "action")
+    if not action == "create_set_repeat_period":
+        redis.hset(f"data_chat_id:{chat_id}", "action", "update")
+
+        # Проверяем, что пользователь выбрал привычку для редактирования
+        habit_id = redis.hget(f"data_chat_id:{chat_id}", "habit_id")
+
+        if habit_id is None:
             bot.send_message(chat_id, "Выберите привычку из списка", reply_markup=habits_commands())
+
         # Формируем данные для отправки на FastAPI
         habit_payload = {
             "repeat_period": call.data,
         }
 
-        habit_id = user_selected_habit[chat_id]["habit_id"]
-
+        # Проверяем наличие токена
         with SessionLocal() as db:
             token = get_token_for_user(db, chat_id)
         if not token:
-            bot.send_message(chat_id, "Пожалуйста, авторизуйтесь через /start", reply_markup=habits_commands())
+            bot.send_message(chat_id,
+                             "Пожалуйста, авторизуйтесь через /start",
+                             reply_markup=habits_commands())
             return
 
         headers = {"Authorization": f"Bearer {token}"}
@@ -59,6 +70,14 @@ def callback_choose_repeat_period_daily(call):
             return
 
         if response.status_code == 200:
+            # Удаляем все данные кроме id привычки
+            all_fields = redis.hkeys(f"data_chat_id:{chat_id}")
+            all_fields = [field.decode() if isinstance(field, bytes) else field for field in all_fields]
+            fields_to_delete = [field for field in all_fields if field != "habit_id"]
+
+            if fields_to_delete:
+                redis.hdel(f"data_chat_id:{chat_id}", *fields_to_delete)
+
             data = response.json()
             # Обработка успешного ответа
             bot.send_message(chat_id, "Привычка успешно обновлена", reply_markup=habit_fields_inline(data, ""))
@@ -66,9 +85,10 @@ def callback_choose_repeat_period_daily(call):
             bot.send_message(chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands())
 
     # Если пользователь на данный момент создает новую привычку,
-    # фиксируем в словаре периодичность и направляем на следующий этап - выбор даты начала
-    if user_data[chat_id]["action"] == "create":
-        user_data[chat_id]['repeat_period'] = call.data
+    # фиксируем в данных пользователя периодичность и направляем на следующий этап - выбор даты начала
+    if action == "create_set_repeat_period":
+        redis.hset(f"data_chat_id:{chat_id}", "repeat_period", call.data)
+        redis.hset(f"data_chat_id:{chat_id}", "action", "create_set_date_at")
         now = datetime.datetime.now()
         markup = calendar.create_calendar(name=calendar_1.prefix, year=now.year, month=now.month)
         bot.send_message(chat_id, "Выберите дату:", reply_markup=markup)
@@ -76,64 +96,103 @@ def callback_choose_repeat_period_daily(call):
 
 @bot.callback_query_handler(func=lambda call: call.data == "weekly")
 def callback_choose_period_weekly(call):
+    """Пользователь выбрал периодичность привычки Еженедельно.
+    Сохраняем периодичность в данных пользователя и предлагаем выбрать дни недели"""
     chat_id = call.from_user.id
 
-    user_data[chat_id]["action"] = "update"
-    if not "week_days" in user_data[chat_id]:
-        user_data[chat_id]["week_days"] = []
+    # Проверяем, что пользователь выбрал привычку для редактирования
+    habit_id = redis.hget(f"data_chat_id:{chat_id}", "habit_id")
 
-    data = user_data[chat_id]["week_days"]
+    if habit_id is None:
+        bot.send_message(chat_id, "Выберите привычку из списка", reply_markup=habits_commands())
+
+    redis.hset(f"data_chat_id:{chat_id}", "repeat_period", "weekly")
+
+    # Если ранее были сохранены дни недели, берем этот список,
+    # если еще не выбраны дни недели, передаем пустой список
+    data = redis.hget(f"data_chat_id:{chat_id}", "week_days")
+    if data is None:
+        data = list()
+    else:
+        data = json.loads(data)
+
     bot.send_message(chat_id, "Выберите дни недели", reply_markup=choose_week_days_inline(data))
 
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('weekday_'))
 def callback_choose_week_days(call):
+    """
+    Пользователь выбрал день недели - сохраняем в данных пользователя
+    """
     chat_id = call.from_user.id
+
     day = int(call.data.split('_')[1])
 
-    if not "week_days" in user_data[chat_id]:
-        user_data[chat_id]["week_days"] = []
-
-    if day in user_data[chat_id]["week_days"]:
-        user_data[chat_id]["week_days"].remove(day)
+    # Если ранее не был сохранен список дней недели, создаем пустой список,
+    # если список уже создан, берем его и обновляем
+    data = redis.hget(f"data_chat_id:{chat_id}", "week_days")
+    if data is None:
+        data = list()
     else:
-        user_data[chat_id]["week_days"].append(day)
+        data = json.loads(data)
 
-    data = user_data[chat_id]["week_days"]
+    # Если день недели есть в списке, удаляем его, если нет - добавляем
+    if day in data:
+        data.remove(day)
+    else:
+        data.append(day)
+
+    redis.hset(f"data_chat_id:{chat_id}", "week_days", json.dumps(data))
     bot.send_message(chat_id, "Выберите дни недели", reply_markup=choose_week_days_inline(data))
 
 
 @bot.callback_query_handler(func=lambda call: call.data == "choose_week_days")
 def callback_set_week_days(call):
+    """
+    Пользователь выбрал дни недели и нажал кнопку Далее.
+    Проверяем, что хотя бы один день недели выбран.
+    Если на данный момент пользователь редактирует привычку, направляем запрос
+    на эндпоинт, если создает новую привычку, сохраняем данные и направляем на следующий шаг
+    """
     chat_id = call.from_user.id
 
-    if not "week_days" in user_data[chat_id] or user_data[chat_id]["week_days"] == []:
+    data = redis.hget(f"data_chat_id:{chat_id}", "week_days")
+
+    if data is None:
         bot.send_message(chat_id, "Выберите хотя бы один день недели и нажмите Далее",
                          reply_markup=choose_week_days_inline([]))
 
-    week_days = sorted(user_data[chat_id]["week_days"])
+    week_days = sorted(json.loads(data))
 
     # Если пользователь на данный момент редактирует ранее созданную привычку,
     # делаем запрос на изменение, возвращаем пользователю измененную привычку
-    if user_data[chat_id]["action"] == "update":
-        if chat_id not in user_selected_habit:
+    action = redis.hget(f"data_chat_id:{chat_id}", "action")
+    if not action == "create_set_repeat_period":
+        redis.hset(f"data_chat_id:{chat_id}", "action", "update")
+
+        # Проверяем, что пользователь выбрал привычку для редактирования
+        habit_id = redis.hget(f"data_chat_id:{chat_id}", "habit_id")
+
+        if habit_id is None:
             bot.send_message(chat_id, "Выберите привычку из списка", reply_markup=habits_commands())
+
         # Формируем данные для отправки на FastAPI
         habit_payload = {
             "repeat_period": "weekly",
             "week_days": week_days
         }
 
-        habit_id = user_selected_habit[chat_id]["habit_id"]
-
         with SessionLocal() as db:
             token = get_token_for_user(db, chat_id)
         if not token:
-            bot.send_message(chat_id, "Пожалуйста, авторизуйтесь через /start", reply_markup=habits_commands())
+            bot.send_message(chat_id,
+                             "Пожалуйста, авторизуйтесь через /start",
+                             reply_markup=habits_commands())
             return
 
         headers = {"Authorization": f"Bearer {token}"}
-        response = requests.post(f"http://{API_HOST}:8000/habits/{habit_id}/update", json=habit_payload,
+        response = requests.post(f"http://{API_HOST}:8000/habits/{habit_id}/update",
+                                 json=habit_payload,
                                  headers=headers)
 
         if response.status_code == 401:
@@ -144,7 +203,9 @@ def callback_set_week_days(call):
             )
             if auth_response.status_code == 200:
                 new_token = auth_response.json().get("access_token")
-                bot.send_message(chat_id, "Токен обновлён, повторите команду.", reply_markup=habits_commands())
+                bot.send_message(chat_id,
+                                 "Токен обновлён, повторите команду.",
+                                 reply_markup=habits_commands())
             else:
                 bot.send_message(chat_id, "Ошибка авторизации, попробуйте позже.", reply_markup=habits_commands())
             return
@@ -152,18 +213,27 @@ def callback_set_week_days(call):
         if response.status_code == 200:
             data = response.json()
 
-            # Очистка данных пользователя
-            user_data.pop(chat_id, None)
+            # Удаляем все данные кроме id привычки
+            all_fields = redis.hkeys(f"data_chat_id:{chat_id}")
+            all_fields = [field.decode() if isinstance(field, bytes) else field for field in all_fields]
+            fields_to_delete = [field for field in all_fields if field != "habit_id"]
+
+            if fields_to_delete:
+                redis.hdel(f"data_chat_id:{chat_id}", *fields_to_delete)
 
             # Обработка успешного ответа
-            bot.send_message(chat_id, "Привычка успешно обновлена", reply_markup=habit_fields_inline(data, ""))
+            bot.send_message(chat_id,
+                             "Привычка успешно обновлена",
+                             reply_markup=habit_fields_inline(data, "one"))
         else:
             bot.send_message(chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands())
 
     # Если пользователь на данный момент создает новую привычку,
-    # фиксируем в словаре периодичность и направляем на следующий этап - выбор даты начала
-    if user_data[chat_id]["action"] == "create":
-        user_data[chat_id]['repeat_period'] = "weekly"
+    # фиксируем в redis дни недели и направляем далее
+    if action == "create_set_repeat_period":
+        redis.hset(f"data_chat_id:{chat_id}", "week_days", json.dumps(week_days))
+        redis.hset(f"data_chat_id:{chat_id}", "action", "create_set_date_at")
+
         now = datetime.datetime.now()
         markup = calendar.create_calendar(name=calendar_1.prefix, year=now.year, month=now.month)
         bot.send_message(chat_id, "Выберите дату:", reply_markup=markup)

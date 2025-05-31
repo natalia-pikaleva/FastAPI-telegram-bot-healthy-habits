@@ -4,7 +4,7 @@ from ...setup import bot
 from database.db_init import SessionLocal
 from database.db_utils import get_token_for_user
 import requests
-from config import setup_logging, API_HOST
+from config import setup_logging, API_HOST, redis_client as redis
 import logging
 from collections import defaultdict
 
@@ -20,7 +20,9 @@ def handle_habit_callback(call):
     в виде inline keyboard и сохраняем id привычки в словаре"""
     habit_id = int(call.data.split('_')[1])
     chat_id = call.from_user.id
-    user_selected_habit[chat_id]["habit_id"] = habit_id
+
+    # Сохраняем id привычки
+    redis.hset(f"data_chat_id:{chat_id}", "habit_id", habit_id)
 
     with SessionLocal() as db:
         token = get_token_for_user(db, chat_id)
@@ -48,6 +50,6 @@ def handle_habit_callback(call):
         data = response.json()
         # Обработка успешного ответа
         bot.send_message(chat_id, "Чтобы изменить параметр привычки, нажмите на него",
-                         reply_markup=habit_fields_inline(data, "one"))
+                         reply_markup=habit_fields_inline(data, ""))
     else:
         bot.send_message(chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands())

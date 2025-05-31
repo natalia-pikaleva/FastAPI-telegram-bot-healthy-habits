@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 @bot.message_handler(commands=["statistics"])
 @bot.message_handler(func=lambda message: message.text == "📈 Статистика")
-def bot_get_statistics(message: Message) -> None:
+def bot_get_statistics(message: Message):
     """
     Хендлер для просмотра статистики
     """

@@ -6,7 +6,7 @@ from database.db_init import start_bd
 from auth.router import router as auth_router
 from habits.router import router as habits_router
 from fastapi import FastAPI
-from config import setup_logging
+from config import setup_logging, redis_client
 import logging
 from scheduler import start_scheduler
 from fastapi import Request
@@ -21,10 +21,12 @@ app.include_router(auth_router, prefix="/auth", tags=["auth"])
 app.include_router(habits_router, prefix="/habits", tags=["habit"])
 
 
+
 def start_bot():
     logger.info("Starting Telegram bot polling")
     set_default_commands(bot)
     bot.infinity_polling(none_stop=True)
+
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -34,13 +36,21 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         content={"detail": exc.errors(), "body": exc.body},
     )
 
+
 @app.on_event("startup")
 def startup_event():
     """
-    Запускаем бота и базу данных
+    Запускаем бота, базу данных и проверяем состояние redis
     """
     try:
         logger.debug("Start startup_event function")
+
+        # Проверка состояния redis
+        try:
+            redis_client.ping()
+            print("Connected to Redis")
+        except Exception as e:
+            print(f"Redis connection error: {e}")
 
         # Запуск планировщика
         start_scheduler()

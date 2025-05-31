@@ -48,7 +48,7 @@ def habit_fields_inline(data, type_answer):
                 callback_data=field
             )
             markup.add(btn)
-    if data.get("week_days") is not None:
+    if data.get("repeat_period") == "Еженедельно" and data.get("week_days") is not None:
         week_days_str = " ".join([week_days[day] for day in data["week_days"]])
         btn = types.InlineKeyboardButton(
             text=f"Дни недели: {week_days_str}",
