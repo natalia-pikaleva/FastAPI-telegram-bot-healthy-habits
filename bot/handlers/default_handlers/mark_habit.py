@@ -46,10 +46,11 @@ def callback_mark_habit(call):
 
         if type_answer == "one":  # если тип ответа one - надо вернуть пользователю информацию об одной привычке
             data = response.json()
+
             # Обработка успешного ответа
             bot.send_message(chat_id,
                              "Отметка о выполнении проставлена/снята",
-                             reply_markup=habit_fields_inline(data, "one"))
+                             reply_markup=habit_fields_inline(data))
 
         elif type_answer == "list":  # если тип ответа list - надо вернуть пользователю список всех привычек
             headers = {"Authorization": f"Bearer {token}"}

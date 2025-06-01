@@ -3,8 +3,8 @@ import threading
 from bot.setup import bot
 from bot.utils import set_default_commands
 from database.db_init import start_bd
-from auth.router import router as auth_router
-from habits.router import router as habits_router
+from routers.auth.router import router as auth_router
+from routers.habits.router import router as habits_router
 from fastapi import FastAPI
 from config import setup_logging, redis_client
 import logging

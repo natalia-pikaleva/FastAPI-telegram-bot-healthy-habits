@@ -50,6 +50,6 @@ def handle_habit_callback(call):
         data = response.json()
         # Обработка успешного ответа
         bot.send_message(chat_id, "Чтобы изменить параметр привычки, нажмите на него",
-                         reply_markup=habit_fields_inline(data, ""))
+                         reply_markup=habit_fields_inline(data))
     else:
         bot.send_message(chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands())

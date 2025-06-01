@@ -15,8 +15,6 @@ logger = logging.getLogger(__name__)
 calendar = Calendar(language=RUSSIAN_LANGUAGE)
 calendar_1 = CallbackData('calendar_1', 'action', 'year', 'month', 'day')
 
-user_selected_fields = defaultdict(set)
-
 
 @bot.callback_query_handler(func=lambda call: call.data == "title")
 def callback_update_title(call):
@@ -88,7 +86,7 @@ def process_title_update(message):
             redis.hdel(f"data_chat_id:{chat_id}", *fields_to_delete)
 
         # Обработка успешного ответа
-        bot.send_message(chat_id, "Привычка успешно обновлена", reply_markup=habit_fields_inline(data, "one"))
+        bot.send_message(chat_id, "Привычка успешно обновлена", reply_markup=habit_fields_inline(data))
     else:
         bot.send_message(chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands())
 

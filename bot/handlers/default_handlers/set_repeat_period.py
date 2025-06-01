@@ -80,7 +80,7 @@ def callback_choose_repeat_period_daily(call):
 
             data = response.json()
             # Обработка успешного ответа
-            bot.send_message(chat_id, "Привычка успешно обновлена", reply_markup=habit_fields_inline(data, ""))
+            bot.send_message(chat_id, "Привычка успешно обновлена", reply_markup=habit_fields_inline(data))
         else:
             bot.send_message(chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands())
 
@@ -224,7 +224,7 @@ def callback_set_week_days(call):
             # Обработка успешного ответа
             bot.send_message(chat_id,
                              "Привычка успешно обновлена",
-                             reply_markup=habit_fields_inline(data, "one"))
+                             reply_markup=habit_fields_inline(data))
         else:
             bot.send_message(chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands())
 

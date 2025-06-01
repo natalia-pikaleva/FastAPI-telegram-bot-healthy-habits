@@ -20,7 +20,7 @@ def habit_list_inline(data, type_answer):
             text=habit["title"],
             callback_data=f"habit_{habit['id']}"
         )
-        if "today_mark" in habit and habit["today_mark"] is not None:
+        if "today_mark" in habit and not habit["today_mark"] is None:
             btn2 = types.InlineKeyboardButton(
                 text="✅",
                 callback_data=f"mark_{habit['id']}_{type_answer}"
@@ -37,7 +37,7 @@ def habit_list_inline(data, type_answer):
     return markup
 
 
-def habit_fields_inline(data, type_answer):
+def habit_fields_inline(data):
     markup = types.InlineKeyboardMarkup(row_width=1)
     for field, value in data.items():
         if not field in ["id", "today_mark", "reminder_time", "week_days"]:
@@ -55,15 +55,15 @@ def habit_fields_inline(data, type_answer):
             callback_data="weekly"
         )
         markup.add(btn)
-    if data["today_mark"]:
+    if "today_mark" in data and not data["today_mark"] is None:
         btn1 = types.InlineKeyboardButton(
-            text=f"✅ Сегодня привычка выполнена",
-            callback_data=f"mark_{data['id']}_{type_answer}"
+            text="✅ Сегодня привычка выполнена",
+            callback_data=f"mark_{data['id']}_one"
         )
     else:
         btn1 = types.InlineKeyboardButton(
-            text=f"🔲 Привычка сегодня не выполнена",
-            callback_data=f"mark_{data['id']}_{type_answer}"
+            text="🔲 Привычка сегодня не выполнена",
+            callback_data=f"mark_{data['id']}_one"
         )
     if data.get("reminder_time") is not None:
         btn2 = types.InlineKeyboardButton(

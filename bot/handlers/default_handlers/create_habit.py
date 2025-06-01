@@ -4,6 +4,9 @@ from config import setup_logging, redis_client as redis, EXIT_COMMANDS
 import logging
 from collections import defaultdict
 from ...keyboards.inline.core import set_repeat_period_inline
+from ...keyboards.reply.core import habits_commands
+from database.db_init import SessionLocal
+from database.db_utils import get_token_for_user
 
 
 
@@ -21,7 +24,12 @@ def bot_create_habit(message: Message) -> None:
     """
     logger.info("Start bot_create_habit")
     chat_id = message.chat.id
-    action = redis.hget(f"data_chat_id:{chat_id}", "action")
+
+    with SessionLocal() as db:
+        token = get_token_for_user(db, chat_id)
+    if not token:
+        bot.send_message(chat_id, "Пожалуйста, авторизуйтесь через /start", reply_markup=habits_commands())
+        return
 
     # Сохраняем в redis действие Создать
     redis.hset(f"data_chat_id:{chat_id}", "action", "create_set_title")
