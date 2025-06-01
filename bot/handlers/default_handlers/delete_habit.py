@@ -16,6 +16,12 @@ def callback_delete_habit_first_step(call):
     habit_id = int(call.data.split('_')[1])
     chat_id = call.from_user.id
 
+    with SessionLocal() as db:
+        token = get_token_for_user(db, chat_id)
+    if not token:
+        bot.send_message(chat_id, "Пожалуйста, авторизуйтесь через /start", reply_markup=habits_commands())
+        return
+
     # Сохраняем id привычки
     redis.hset(f"data_chat_id:{chat_id}", "habit_id", habit_id)
 

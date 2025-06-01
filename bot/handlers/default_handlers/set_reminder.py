@@ -18,6 +18,12 @@ def bot_set_reminder_to_habit(call):
     """
     chat_id = call.from_user.id
 
+    with SessionLocal() as db:
+        token = get_token_for_user(db, chat_id)
+    if not token:
+        bot.send_message(chat_id, "Пожалуйста, авторизуйтесь через /start", reply_markup=habits_commands())
+        return
+
     habit_id = int(call.data.split('_')[1])
 
     # Сохраняем id привычки

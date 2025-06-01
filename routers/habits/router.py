@@ -10,7 +10,7 @@ from fastapi import Depends, APIRouter, status, HTTPException
 from config import setup_logging
 import logging
 from typing import List, Any
-from auth.utils import get_current_user
+from ..auth.utils import get_current_user
 from datetime import date
 
 setup_logging()
@@ -203,7 +203,12 @@ def set_mark_on_habit(
 
     if today_habit_mark:
         # Отметка за сегодня уже сделана, пользователь хочет убрать отметку
-        response.today_mark = date.today()
+        db.delete(today_habit_mark)
+        db.commit()
+        if response.repeat_period == "daily":
+            response.repeat_period = "Ежедневно"
+        else:
+            response.repeat_period = "Еженедельно"
         return response
 
     # Отметки за сегодня еще нет, ставим
@@ -213,6 +218,11 @@ def set_mark_on_habit(
     )
     db.add(today_habit_mark)
     db.commit()
+
+    if response.repeat_period == "daily":
+        response.repeat_period = "Ежедневно"
+    else:
+        response.repeat_period = "Еженедельно"
 
     response.today_mark = date.today()
     return response
@@ -282,6 +292,7 @@ def get_habits_list(
         db: Session = Depends(get_db),
         current_user: Any = Depends(get_current_user),
 ):
+
     today = date.today()
     today_tracker = aliased(HabitTracker)
 

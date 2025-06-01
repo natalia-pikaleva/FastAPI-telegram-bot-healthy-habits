@@ -35,10 +35,13 @@ def calendar_callback(call):
             return
 
         if saved_action == "create_set_date_at":
+
             # Формируем данные для отправки на FastAPI
             title = redis.hget(f"data_chat_id:{chat_id}", "title")
             repeat_period = redis.hget(f"data_chat_id:{chat_id}", "repeat_period")
-            week_days = json.loads(redis.hget(f"data_chat_id:{chat_id}", "week_days"))
+            week_days = redis.hget(f"data_chat_id:{chat_id}", "week_days")
+            if not week_days is None:
+                week_days = json.loads(week_days)
 
             habit_payload = {
                 "title": title,
@@ -72,7 +75,7 @@ def calendar_callback(call):
                 redis.hset(f"data_chat_id:{chat_id}", "habit_id", data["id"])
 
                 # Обработка успешного ответа
-                bot.send_message(chat_id, "Привычка успешно добавлена", reply_markup=habit_fields_inline(data, ""))
+                bot.send_message(chat_id, "Привычка успешно добавлена", reply_markup=habit_fields_inline(data))
             else:
                 bot.send_message(chat_id, "Ошибка при выполнении запроса", reply_markup=habits_commands())
 
@@ -112,7 +115,7 @@ def calendar_callback(call):
                 redis.hset(f"data_chat_id:{chat_id}", "habit_id", data["id"])
 
                 # Обработка успешного ответа
-                bot.send_message(chat_id, "Привычка успешно обновлена", reply_markup=habit_fields_inline(data, ""))
+                bot.send_message(chat_id, "Привычка успешно обновлена", reply_markup=habit_fields_inline(data))
             else:
                 bot.send_message(chat_id, "Ошибка при выполнении запроса", reply_markup=habits_commands())
     elif action == 'CANCEL':
