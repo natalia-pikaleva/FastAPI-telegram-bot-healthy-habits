@@ -15,11 +15,11 @@ logger = logging.getLogger(__name__)
 user_selected_habit = defaultdict(dict)
 
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith('habit_'))
+@bot.callback_query_handler(func=lambda call: call.data.startswith("habit_"))
 def handle_habit_callback(call):
     """Пользователь нажал на привычку в списке, возвращаем пользователю данные о привычке
     в виде inline keyboard и сохраняем id привычки в словаре"""
-    habit_id = int(call.data.split('_')[1])
+    habit_id = int(call.data.split("_")[1])
     chat_id = call.from_user.id
 
     # Сохраняем id привычки
@@ -28,11 +28,17 @@ def handle_habit_callback(call):
     with SessionLocal() as db:
         token = get_token_for_user(db, chat_id)
     if not token:
-        bot.send_message(chat_id, "Пожалуйста, авторизуйтесь через /start", reply_markup=habits_commands())
+        bot.send_message(
+            chat_id,
+            "Пожалуйста, авторизуйтесь через /start",
+            reply_markup=habits_commands(),
+        )
         return
 
     headers = {"Authorization": f"Bearer {token}"}
-    response = requests.get(f"http://{API_HOST}:8000/habits/{habit_id}", headers=headers)
+    response = requests.get(
+        f"http://{API_HOST}:8000/habits/{habit_id}", headers=headers
+    )
 
     if response.status_code == 401:
         # Токен истёк или недействителен, пробуем получить новый
@@ -41,7 +47,12 @@ def handle_habit_callback(call):
     if response.status_code == 200:
         data = response.json()
         # Обработка успешного ответа
-        bot.send_message(chat_id, "Чтобы изменить параметр привычки, нажмите на него",
-                         reply_markup=habit_fields_inline(data))
+        bot.send_message(
+            chat_id,
+            "Чтобы изменить параметр привычки, нажмите на него",
+            reply_markup=habit_fields_inline(data),
+        )
     else:
-        bot.send_message(chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands())
+        bot.send_message(
+            chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands()
+        )

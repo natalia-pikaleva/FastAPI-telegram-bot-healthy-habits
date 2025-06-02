@@ -17,7 +17,9 @@ logger = logging.getLogger(__name__)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 
-def create_access_token(data: dict, secret_key: str, algorithm: str, expires_minutes: int):
+def create_access_token(
+    data: dict, secret_key: str, algorithm: str, expires_minutes: int
+):
     logger.debug(f"Start create_access_token")
 
     to_encode = data.copy()
@@ -32,8 +34,7 @@ def create_access_token(data: dict, secret_key: str, algorithm: str, expires_min
 
 
 def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db)
+    token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
 ) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,

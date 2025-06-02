@@ -21,7 +21,6 @@ app.include_router(auth_router, prefix="/auth", tags=["auth"])
 app.include_router(habits_router, prefix="/habits", tags=["habit"])
 
 
-
 def start_bot():
     logger.info("Starting Telegram bot polling")
     set_default_commands(bot)

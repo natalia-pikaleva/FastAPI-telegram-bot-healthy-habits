@@ -13,8 +13,7 @@ logger = logging.getLogger(__name__)
 def get_user_by_chat_id(db: Session, chat_id: int) -> User:
     """Получение пользователя по id чата"""
     logger.debug("start get_user_by_chat_id")
-    user = (db.execute(select(User)
-                       .where(User.telegram_id == chat_id))).scalar()
+    user = (db.execute(select(User).where(User.telegram_id == chat_id))).scalar()
     logger.debug(f"user: {user}")
 
     return user
@@ -23,8 +22,7 @@ def get_user_by_chat_id(db: Session, chat_id: int) -> User:
 def get_user_by_id(db: Session, user_id: int) -> User:
     """Получение пользователя по его id"""
     logger.debug("start get_user_by_id")
-    user = (db.execute(select(User)
-                       .where(User.id == user_id))).scalar()
+    user = (db.execute(select(User).where(User.id == user_id))).scalar()
     logger.debug(f"user: {user}")
 
     return user
@@ -37,7 +35,9 @@ def get_token_for_user(db: Session, chat_id: int):
     token = db.execute(
         select(UserToken.token)
         .where(UserToken.user_id == user.id)
-        .order_by(desc(UserToken.id))  # сортируем по убыванию id, чтобы последний был первым
+        .order_by(
+            desc(UserToken.id)
+        )  # сортируем по убыванию id, чтобы последний был первым
         .limit(1)
     ).scalar_one_or_none()
     return token
@@ -46,7 +46,9 @@ def get_token_for_user(db: Session, chat_id: int):
 def save_token_for_user(db: Session, user: User, access_token):
     """Сохранение токена пользователя"""
     try:
-        user_token = db.execute(select(UserToken).filter(UserToken.user_id == user.id)).scalar_one_or_none()
+        user_token = db.execute(
+            select(UserToken).filter(UserToken.user_id == user.id)
+        ).scalar_one_or_none()
         if user_token:
             user_token.token = access_token
         else:
@@ -61,7 +63,6 @@ def save_token_for_user(db: Session, user: User, access_token):
 def get_habit_by_id(db: Session, habit_id: int) -> Habit:
     """Получение привычки по ее id"""
     logger.debug("start get_habit_by_id")
-    habit = (db.execute(select(Habit)
-                        .where(Habit.id == habit_id))).scalar()
+    habit = (db.execute(select(Habit).where(Habit.id == habit_id))).scalar()
 
     return habit

@@ -21,9 +21,11 @@ router = APIRouter()
 @router.post("/login", response_model=TokenResponse)
 def auth(auth_req: AuthRequest, db: Session = Depends(get_db)):
     logger.debug("Start router auth")
-    user = db.execute(
-        select(User).where(User.telegram_id == auth_req.telegram_id)
-    ).scalars().one_or_none()
+    user = (
+        db.execute(select(User).where(User.telegram_id == auth_req.telegram_id))
+        .scalars()
+        .one_or_none()
+    )
 
     if user is None:
         logger.debug("User is None, start create User")
@@ -37,7 +39,11 @@ def auth(auth_req: AuthRequest, db: Session = Depends(get_db)):
             logger.error(f"Error creating user: {e}")
             raise
 
-    old_token = db.execute(select(UserToken).filter(UserToken.user_id == user.id)).scalars().first()
+    old_token = (
+        db.execute(select(UserToken).filter(UserToken.user_id == user.id))
+        .scalars()
+        .first()
+    )
 
     if old_token:
         logger.debug("Delete okd token")
@@ -45,13 +51,12 @@ def auth(auth_req: AuthRequest, db: Session = Depends(get_db)):
         db.delete(old_token)
         db.commit()
 
-
     token_data = {"sub": str(user.id)}
     access_token = create_access_token(
         data=token_data,
         secret_key=SECRET_KEY,
         algorithm=ALGORITHM,
-        expires_minutes=ACCESS_TOKEN_EXPIRE_MINUTES
+        expires_minutes=ACCESS_TOKEN_EXPIRE_MINUTES,
     )
     logger.debug("Created token")
     payload = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
