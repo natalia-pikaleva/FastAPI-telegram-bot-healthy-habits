@@ -1,4 +1,5 @@
-from ...setup import bot
+from bot.setup import bot
+from bot.utils import get_new_token
 from database.db_init import SessionLocal
 import requests
 from bot.keyboards.reply.core import habits_commands
@@ -49,7 +50,6 @@ def handle_set_timezone_callback(call):
     """Пользователь выбрал часовой пояс, сохраняем его в словаре и направляем запрос на эндпоинт"""
     sign = call.data.split('_')[1]
     zone = call.data.split('_')[2]
-
     timezone = f"Etc/GMT{sign}{zone}"
     chat_id = call.from_user.id
 
@@ -77,16 +77,7 @@ def handle_set_timezone_callback(call):
 
     if response.status_code == 401:
         # Токен истёк или недействителен, пробуем получить новый
-        auth_response = requests.post(
-            f"http://{API_HOST}:8000/auth/login",
-            json={"telegram_id": chat_id}
-        )
-        if auth_response.status_code == 200:
-            new_token = auth_response.json().get("access_token")
-            bot.send_message(chat_id, "Токен обновлён, повторите команду.", reply_markup=habits_commands())
-        else:
-            bot.send_message(chat_id, "Ошибка авторизации, попробуйте позже.", reply_markup=habits_commands())
-        return
+        get_new_token(chat_id)
 
     if response.status_code == 200:
         # Обработка успешного ответа

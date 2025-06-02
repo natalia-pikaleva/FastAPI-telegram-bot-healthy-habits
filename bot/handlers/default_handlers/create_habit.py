@@ -1,10 +1,10 @@
 from telebot.types import Message
-from ...setup import bot
+from bot.setup import bot
 from config import setup_logging, redis_client as redis, EXIT_COMMANDS
 import logging
 from collections import defaultdict
-from ...keyboards.inline.core import set_repeat_period_inline
-from ...keyboards.reply.core import habits_commands
+from bot.keyboards.inline.core import set_repeat_period_inline
+from bot.keyboards.reply.core import habits_commands
 from database.db_init import SessionLocal
 from database.db_utils import get_token_for_user
 

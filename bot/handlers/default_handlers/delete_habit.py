@@ -1,6 +1,7 @@
-from ...keyboards.inline.core import confirmation_of_habit_deletion_inline
-from ...keyboards.reply.core import habits_commands
-from ...setup import bot
+from bot.keyboards.inline.core import confirmation_of_habit_deletion_inline
+from bot.keyboards.reply.core import habits_commands
+from bot.setup import bot
+from bot.utils import get_new_token
 from database.db_init import SessionLocal
 from database.db_utils import get_token_for_user
 import requests
@@ -46,16 +47,7 @@ def callback_delete_habit_second_step(call):
 
     if response.status_code == 401:
         # Токен истёк или недействителен, пробуем получить новый
-        auth_response = requests.post(
-            f"http://{API_HOST}:8000/auth/login",
-            json={"telegram_id": chat_id}
-        )
-        if auth_response.status_code == 200:
-            new_token = auth_response.json().get("access_token")
-            bot.send_message(chat_id, "Токен обновлён, повторите команду.", reply_markup=habits_commands())
-        else:
-            bot.send_message(chat_id, "Ошибка авторизации, попробуйте позже.", reply_markup=habits_commands())
-        return
+        get_new_token(chat_id)
 
     if response.status_code == 200:
         # Обработка успешного ответа

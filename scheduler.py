@@ -6,7 +6,7 @@ from bot.setup import bot
 from datetime import datetime, timezone
 from database.models import Reminder, Habit, HabitTracker
 import pytz
-from sqlalchemy import and_, or_, exists, not_, select
+from sqlalchemy import and_, or_, not_, select
 
 from bot.keyboards.inline.core import mark_habit
 

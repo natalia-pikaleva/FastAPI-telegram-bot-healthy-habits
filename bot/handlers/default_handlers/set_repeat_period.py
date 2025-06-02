@@ -1,8 +1,9 @@
 import json
-from ...keyboards.inline.core import (habit_fields_inline,
-                                      choose_week_days_inline)
-from ...keyboards.reply.core import habits_commands
-from ...setup import bot
+from bot.keyboards.inline.core import (habit_fields_inline,
+                                       choose_week_days_inline)
+from bot.keyboards.reply.core import habits_commands
+from bot.setup import bot
+from bot.utils import get_new_token
 from database.db_init import SessionLocal
 from database.db_utils import get_token_for_user
 import requests
@@ -17,6 +18,108 @@ calendar = Calendar(language=RUSSIAN_LANGUAGE)
 calendar_1 = CallbackData('calendar_1', 'action', 'year', 'month', 'day')
 
 
+def update_habit_repeat_period_daily_request_api(chat_id):
+    """Формируем запрос на API для установки периодичности Ежедневно и возвращаем
+    пользователю созданную привычку в виде инлайн кнопок"""
+    redis.hset(f"data_chat_id:{chat_id}", "action", "update")
+
+    # Проверяем, что пользователь выбрал привычку для редактирования
+    habit_id = redis.hget(f"data_chat_id:{chat_id}", "habit_id")
+
+    if habit_id is None:
+        bot.send_message(chat_id, "Выберите привычку из списка", reply_markup=habits_commands())
+
+    # Формируем данные для отправки на FastAPI
+    habit_payload = {
+        "repeat_period": "daily",
+    }
+
+    # Проверяем наличие токена
+    with SessionLocal() as db:
+        token = get_token_for_user(db, chat_id)
+    if not token:
+        bot.send_message(chat_id,
+                         "Пожалуйста, авторизуйтесь через /start",
+                         reply_markup=habits_commands())
+        return
+
+    headers = {"Authorization": f"Bearer {token}"}
+    response = requests.post(f"http://{API_HOST}:8000/habits/{habit_id}/update", json=habit_payload,
+                             headers=headers)
+
+    if response.status_code == 401:
+        # Токен истёк или недействителен, пробуем получить новый
+        get_new_token(chat_id)
+
+    if response.status_code == 200:
+        # Удаляем все данные кроме id привычки
+        all_fields = redis.hkeys(f"data_chat_id:{chat_id}")
+        all_fields = [field.decode() if isinstance(field, bytes) else field for field in all_fields]
+        fields_to_delete = [field for field in all_fields if field != "habit_id"]
+
+        if fields_to_delete:
+            redis.hdel(f"data_chat_id:{chat_id}", *fields_to_delete)
+
+        data = response.json()
+        # Обработка успешного ответа
+        bot.send_message(chat_id, "Привычка успешно обновлена", reply_markup=habit_fields_inline(data))
+    else:
+        bot.send_message(chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands())
+
+
+def update_habit_repeat_period_weekly_request_api(chat_id, week_days):
+    """Формируем запрос на API для установки периодичности Еженедельно с указанием дней и возвращаем
+    пользователю созданную привычку в виде инлайн кнопок"""
+    redis.hset(f"data_chat_id:{chat_id}", "action", "update")
+
+    # Проверяем, что пользователь выбрал привычку для редактирования
+    habit_id = redis.hget(f"data_chat_id:{chat_id}", "habit_id")
+
+    if habit_id is None:
+        bot.send_message(chat_id, "Выберите привычку из списка", reply_markup=habits_commands())
+
+    # Формируем данные для отправки на FastAPI
+    habit_payload = {
+        "repeat_period": "weekly",
+        "week_days": week_days
+    }
+
+    with SessionLocal() as db:
+        token = get_token_for_user(db, chat_id)
+    if not token:
+        bot.send_message(chat_id,
+                         "Пожалуйста, авторизуйтесь через /start",
+                         reply_markup=habits_commands())
+        return
+
+    headers = {"Authorization": f"Bearer {token}"}
+    response = requests.post(f"http://{API_HOST}:8000/habits/{habit_id}/update",
+                             json=habit_payload,
+                             headers=headers)
+
+    if response.status_code == 401:
+        # Токен истёк или недействителен, пробуем получить новый
+        get_new_token(chat_id)
+
+    if response.status_code == 200:
+        data = response.json()
+
+        # Удаляем все данные кроме id привычки
+        all_fields = redis.hkeys(f"data_chat_id:{chat_id}")
+        all_fields = [field.decode() if isinstance(field, bytes) else field for field in all_fields]
+        fields_to_delete = [field for field in all_fields if field != "habit_id"]
+
+        if fields_to_delete:
+            redis.hdel(f"data_chat_id:{chat_id}", *fields_to_delete)
+
+        # Обработка успешного ответа
+        bot.send_message(chat_id,
+                         "Привычка успешно обновлена",
+                         reply_markup=habit_fields_inline(data))
+    else:
+        bot.send_message(chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands())
+
+
 @bot.callback_query_handler(func=lambda call: call.data == "daily")
 def callback_choose_repeat_period_daily(call):
     """
@@ -27,62 +130,11 @@ def callback_choose_repeat_period_daily(call):
     chat_id = call.from_user.id
 
     # Проверяем действие на данный момент: если действие не создать новую привычку,
-    # значит пользователь редактирует ранее созданную, устанавливаем поле действия update
+    # значит пользователь редактирует ранее созданную, устанавливаем поле действия update и
+    # направляем запрос на API
     action = redis.hget(f"data_chat_id:{chat_id}", "action")
     if not action == "create_set_repeat_period":
-        redis.hset(f"data_chat_id:{chat_id}", "action", "update")
-
-        # Проверяем, что пользователь выбрал привычку для редактирования
-        habit_id = redis.hget(f"data_chat_id:{chat_id}", "habit_id")
-
-        if habit_id is None:
-            bot.send_message(chat_id, "Выберите привычку из списка", reply_markup=habits_commands())
-
-        # Формируем данные для отправки на FastAPI
-        habit_payload = {
-            "repeat_period": call.data,
-        }
-
-        # Проверяем наличие токена
-        with SessionLocal() as db:
-            token = get_token_for_user(db, chat_id)
-        if not token:
-            bot.send_message(chat_id,
-                             "Пожалуйста, авторизуйтесь через /start",
-                             reply_markup=habits_commands())
-            return
-
-        headers = {"Authorization": f"Bearer {token}"}
-        response = requests.post(f"http://{API_HOST}:8000/habits/{habit_id}/update", json=habit_payload,
-                                 headers=headers)
-
-        if response.status_code == 401:
-            # Токен истёк или недействителен, пробуем получить новый
-            auth_response = requests.post(
-                f"http://{API_HOST}:8000/auth/login",
-                json={"telegram_id": chat_id}
-            )
-            if auth_response.status_code == 200:
-                new_token = auth_response.json().get("access_token")
-                bot.send_message(chat_id, "Токен обновлён, повторите команду.", reply_markup=habits_commands())
-            else:
-                bot.send_message(chat_id, "Ошибка авторизации, попробуйте позже.", reply_markup=habits_commands())
-            return
-
-        if response.status_code == 200:
-            # Удаляем все данные кроме id привычки
-            all_fields = redis.hkeys(f"data_chat_id:{chat_id}")
-            all_fields = [field.decode() if isinstance(field, bytes) else field for field in all_fields]
-            fields_to_delete = [field for field in all_fields if field != "habit_id"]
-
-            if fields_to_delete:
-                redis.hdel(f"data_chat_id:{chat_id}", *fields_to_delete)
-
-            data = response.json()
-            # Обработка успешного ответа
-            bot.send_message(chat_id, "Привычка успешно обновлена", reply_markup=habit_fields_inline(data))
-        else:
-            bot.send_message(chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands())
+        update_habit_repeat_period_daily_request_api(chat_id)
 
     # Если пользователь на данный момент создает новую привычку,
     # фиксируем в данных пользователя периодичность и направляем на следующий этап - выбор даты начала
@@ -168,65 +220,7 @@ def callback_set_week_days(call):
     # делаем запрос на изменение, возвращаем пользователю измененную привычку
     action = redis.hget(f"data_chat_id:{chat_id}", "action")
     if not action == "create_set_repeat_period":
-        redis.hset(f"data_chat_id:{chat_id}", "action", "update")
-
-        # Проверяем, что пользователь выбрал привычку для редактирования
-        habit_id = redis.hget(f"data_chat_id:{chat_id}", "habit_id")
-
-        if habit_id is None:
-            bot.send_message(chat_id, "Выберите привычку из списка", reply_markup=habits_commands())
-
-        # Формируем данные для отправки на FastAPI
-        habit_payload = {
-            "repeat_period": "weekly",
-            "week_days": week_days
-        }
-
-        with SessionLocal() as db:
-            token = get_token_for_user(db, chat_id)
-        if not token:
-            bot.send_message(chat_id,
-                             "Пожалуйста, авторизуйтесь через /start",
-                             reply_markup=habits_commands())
-            return
-
-        headers = {"Authorization": f"Bearer {token}"}
-        response = requests.post(f"http://{API_HOST}:8000/habits/{habit_id}/update",
-                                 json=habit_payload,
-                                 headers=headers)
-
-        if response.status_code == 401:
-            # Токен истёк или недействителен, пробуем получить новый
-            auth_response = requests.post(
-                f"http://{API_HOST}:8000/auth/login",
-                json={"telegram_id": chat_id}
-            )
-            if auth_response.status_code == 200:
-                new_token = auth_response.json().get("access_token")
-                bot.send_message(chat_id,
-                                 "Токен обновлён, повторите команду.",
-                                 reply_markup=habits_commands())
-            else:
-                bot.send_message(chat_id, "Ошибка авторизации, попробуйте позже.", reply_markup=habits_commands())
-            return
-
-        if response.status_code == 200:
-            data = response.json()
-
-            # Удаляем все данные кроме id привычки
-            all_fields = redis.hkeys(f"data_chat_id:{chat_id}")
-            all_fields = [field.decode() if isinstance(field, bytes) else field for field in all_fields]
-            fields_to_delete = [field for field in all_fields if field != "habit_id"]
-
-            if fields_to_delete:
-                redis.hdel(f"data_chat_id:{chat_id}", *fields_to_delete)
-
-            # Обработка успешного ответа
-            bot.send_message(chat_id,
-                             "Привычка успешно обновлена",
-                             reply_markup=habit_fields_inline(data))
-        else:
-            bot.send_message(chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands())
+        update_habit_repeat_period_weekly_request_api(chat_id=chat_id, week_days=week_days)
 
     # Если пользователь на данный момент создает новую привычку,
     # фиксируем в redis дни недели и направляем далее
