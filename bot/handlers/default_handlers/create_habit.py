@@ -9,7 +9,6 @@ from database.db_init import SessionLocal
 from database.db_utils import get_token_for_user
 
 
-
 setup_logging()
 logger = logging.getLogger(__name__)
 user_data = defaultdict(dict)
@@ -28,7 +27,11 @@ def bot_create_habit(message: Message) -> None:
     with SessionLocal() as db:
         token = get_token_for_user(db, chat_id)
     if not token:
-        bot.send_message(chat_id, "Пожалуйста, авторизуйтесь через /start", reply_markup=habits_commands())
+        bot.send_message(
+            chat_id,
+            "Пожалуйста, авторизуйтесь через /start",
+            reply_markup=habits_commands(),
+        )
         return
 
     # Сохраняем в redis действие Создать
@@ -53,6 +56,8 @@ def process_name_step(message):
         # Сохраняем в redis название привычки
         redis.hset(f"data_chat_id:{chat_id}", "title", message.text)
         redis.hset(f"data_chat_id:{chat_id}", "action", "create_set_repeat_period")
-        bot.send_message(chat_id, "Выберите периодичность", reply_markup=set_repeat_period_inline())
+        bot.send_message(
+            chat_id, "Выберите периодичность", reply_markup=set_repeat_period_inline()
+        )
     else:
         bot.send_message(chat_id, "Не понимаю команду")

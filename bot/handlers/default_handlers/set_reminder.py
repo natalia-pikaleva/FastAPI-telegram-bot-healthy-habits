@@ -12,7 +12,7 @@ setup_logging()
 logger = logging.getLogger(__name__)
 
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith('setreminder_'))
+@bot.callback_query_handler(func=lambda call: call.data.startswith("setreminder_"))
 def bot_set_reminder_to_habit(call):
     """
     Хендлер для установки времени напоминания для конкретной привычки
@@ -22,41 +22,53 @@ def bot_set_reminder_to_habit(call):
     with SessionLocal() as db:
         token = get_token_for_user(db, chat_id)
     if not token:
-        bot.send_message(chat_id, "Пожалуйста, авторизуйтесь через /start", reply_markup=habits_commands())
+        bot.send_message(
+            chat_id,
+            "Пожалуйста, авторизуйтесь через /start",
+            reply_markup=habits_commands(),
+        )
         return
 
-    habit_id = int(call.data.split('_')[1])
+    habit_id = int(call.data.split("_")[1])
 
     # Сохраняем id привычки
     redis.hset(f"data_chat_id:{chat_id}", "habit_id", habit_id)
 
-    bot.send_message(chat_id, "Выберите удобное время для напоминаний", reply_markup=hours_inline())
+    bot.send_message(
+        chat_id, "Выберите удобное время для напоминаний", reply_markup=hours_inline()
+    )
 
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith('hour_'))
+@bot.callback_query_handler(func=lambda call: call.data.startswith("hour_"))
 def handle_set_hour_callback(call):
     """Пользователь выбрал время для напоминания, сохраняем время и предлагаем выбрать часовой пояс"""
-    hour = int(call.data.split('_')[1])
+    hour = int(call.data.split("_")[1])
     chat_id = call.from_user.id
 
     # Сохраняем выбранное время напоминания
     redis.hset(f"data_chat_id:{chat_id}", "hour", f"{hour:02d}:00")
 
-    bot.send_message(chat_id, "Выберите ваш часовой пояс", reply_markup=timezone_inline())
+    bot.send_message(
+        chat_id, "Выберите ваш часовой пояс", reply_markup=timezone_inline()
+    )
 
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith('timezone_'))
+@bot.callback_query_handler(func=lambda call: call.data.startswith("timezone_"))
 def handle_set_timezone_callback(call):
     """Пользователь выбрал часовой пояс, сохраняем его в словаре и направляем запрос на эндпоинт"""
-    sign = call.data.split('_')[1]
-    zone = call.data.split('_')[2]
+    sign = call.data.split("_")[1]
+    zone = call.data.split("_")[2]
     timezone = f"Etc/GMT{sign}{zone}"
     chat_id = call.from_user.id
 
     with SessionLocal() as db:
         token = get_token_for_user(db, chat_id)
     if not token:
-        bot.send_message(chat_id, "Пожалуйста, авторизуйтесь через /start", reply_markup=habits_commands())
+        bot.send_message(
+            chat_id,
+            "Пожалуйста, авторизуйтесь через /start",
+            reply_markup=habits_commands(),
+        )
         return
 
     # Формируем данные для отправки на FastAPI
@@ -73,7 +85,8 @@ def handle_set_timezone_callback(call):
     response = requests.post(
         f"http://{API_HOST}:8000/habits/{habit_id}/set_reminder",
         json=reminder_payload,
-        headers=headers)
+        headers=headers,
+    )
 
     if response.status_code == 401:
         # Токен истёк или недействителен, пробуем получить новый
@@ -81,7 +94,12 @@ def handle_set_timezone_callback(call):
 
     if response.status_code == 200:
         # Обработка успешного ответа
-        bot.send_message(chat_id, f"Время напоминания установлено: {hour}",
-                         reply_markup=habits_commands())
+        bot.send_message(
+            chat_id,
+            f"Время напоминания установлено: {hour}",
+            reply_markup=habits_commands(),
+        )
     else:
-        bot.send_message(chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands())
+        bot.send_message(
+            chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands()
+        )

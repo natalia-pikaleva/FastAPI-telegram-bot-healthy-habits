@@ -12,7 +12,7 @@ from bot.keyboards.inline.core import habit_fields_inline
 
 logger = logging.getLogger(__name__)
 calendar = Calendar(language=RUSSIAN_LANGUAGE)
-calendar_1 = CallbackData('calendar_1', 'action', 'year', 'month', 'day')
+calendar_1 = CallbackData("calendar_1", "action", "year", "month", "day")
 
 
 def create_habit_request_api(chat_id, date, token):
@@ -29,12 +29,14 @@ def create_habit_request_api(chat_id, date, token):
         "title": title,
         "repeat_period": repeat_period,
         "week_days": week_days,
-        "start_at": date.isoformat()
+        "start_at": date.isoformat(),
     }
 
     # Отправка POST-запроса на FastAPI сервер
     headers = {"Authorization": f"Bearer {token}"}
-    response = requests.post(f"http://{API_HOST}:8000/habits/create", json=habit_payload, headers=headers)
+    response = requests.post(
+        f"http://{API_HOST}:8000/habits/create", json=habit_payload, headers=headers
+    )
 
     if response.status_code == 401:
         # Токен истёк или недействителен, пробуем получить новый
@@ -48,9 +50,15 @@ def create_habit_request_api(chat_id, date, token):
         redis.hset(f"data_chat_id:{chat_id}", "habit_id", data["id"])
 
         # Обработка успешного ответа
-        bot.send_message(chat_id, "Привычка успешно добавлена", reply_markup=habit_fields_inline(data))
+        bot.send_message(
+            chat_id,
+            "Привычка успешно добавлена",
+            reply_markup=habit_fields_inline(data),
+        )
     else:
-        bot.send_message(chat_id, "Ошибка при выполнении запроса", reply_markup=habits_commands())
+        bot.send_message(
+            chat_id, "Ошибка при выполнении запроса", reply_markup=habits_commands()
+        )
 
 
 def update_habit_date_at_request_api(chat_id, date, token):
@@ -64,11 +72,16 @@ def update_habit_date_at_request_api(chat_id, date, token):
     habit_id = redis.hget(f"data_chat_id:{chat_id}", "habit_id")
 
     if habit_id is None:
-        bot.send_message(chat_id, "Выберите привычку из списка", reply_markup=habits_commands())
+        bot.send_message(
+            chat_id, "Выберите привычку из списка", reply_markup=habits_commands()
+        )
 
     headers = {"Authorization": f"Bearer {token}"}
-    response = requests.post(f"http://{API_HOST}:8000/habits/{habit_id}/update", json=habit_payload,
-                             headers=headers)
+    response = requests.post(
+        f"http://{API_HOST}:8000/habits/{habit_id}/update",
+        json=habit_payload,
+        headers=headers,
+    )
 
     if response.status_code == 401:
         # Токен истёк или недействителен, пробуем получить новый
@@ -82,9 +95,15 @@ def update_habit_date_at_request_api(chat_id, date, token):
         redis.hset(f"data_chat_id:{chat_id}", "habit_id", data["id"])
 
         # Обработка успешного ответа
-        bot.send_message(chat_id, "Привычка успешно обновлена", reply_markup=habit_fields_inline(data))
+        bot.send_message(
+            chat_id,
+            "Привычка успешно обновлена",
+            reply_markup=habit_fields_inline(data),
+        )
     else:
-        bot.send_message(chat_id, "Ошибка при выполнении запроса", reply_markup=habits_commands())
+        bot.send_message(
+            chat_id, "Ошибка при выполнении запроса", reply_markup=habits_commands()
+        )
 
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith(calendar_1.prefix))
@@ -100,11 +119,15 @@ def calendar_callback(call):
     chat_id = call.from_user.id
     saved_action = redis.hget(f"data_chat_id:{chat_id}", "action")
 
-    if action == 'DAY':
+    if action == "DAY":
         with SessionLocal() as db:
             token = get_token_for_user(db, chat_id)
         if not token:
-            bot.send_message(chat_id, "Пожалуйста, авторизуйтесь через /start", reply_markup=habits_commands())
+            bot.send_message(
+                chat_id,
+                "Пожалуйста, авторизуйтесь через /start",
+                reply_markup=habits_commands(),
+            )
             return
 
         if saved_action == "create_set_date_at":
@@ -113,5 +136,5 @@ def calendar_callback(call):
         if saved_action == "update":
             update_habit_date_at_request_api(chat_id=chat_id, date=date, token=token)
 
-    elif action == 'CANCEL':
+    elif action == "CANCEL":
         bot.send_message(chat_id, "Выбор даты отменён", reply_markup=habits_commands())

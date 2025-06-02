@@ -10,7 +10,9 @@ import logging
 setup_logging()
 logger = logging.getLogger(__name__)
 
-SQLALCHEMY_DATABASE_URI = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:5432/{DB_NAME}"
+SQLALCHEMY_DATABASE_URI = (
+    f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:5432/{DB_NAME}"
+)
 
 # engine = create_engine(SQLALCHEMY_DATABASE_URI, echo=True)
 engine = create_engine(SQLALCHEMY_DATABASE_URI)
@@ -91,7 +93,7 @@ def drop_database() -> None:
             port=5432,
             user=DB_USER,
             password=DB_PASSWORD,
-            database="postgres"
+            database="postgres",
         )
         conn.autocommit = True
         cur = conn.cursor()

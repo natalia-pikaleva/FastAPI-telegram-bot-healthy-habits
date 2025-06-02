@@ -24,13 +24,17 @@ def bot_get_habits(message: Message) -> None:
     with SessionLocal() as db:
         token = get_token_for_user(db, chat_id)
     if not token:
-        bot.send_message(chat_id, "Пожалуйста, авторизуйтесь через /start", reply_markup=habits_commands())
+        bot.send_message(
+            chat_id,
+            "Пожалуйста, авторизуйтесь через /start",
+            reply_markup=habits_commands(),
+        )
         return
 
     headers = {"Authorization": f"Bearer {token}"}
     response = requests.get(f"http://{API_HOST}:8000/habits", headers=headers)
-    logger.debug(f'Headers: {response.request.headers}')
-    logger.debug(f'Code: {response.status_code}')
+    logger.debug(f"Headers: {response.request.headers}")
+    logger.debug(f"Code: {response.status_code}")
 
     if response.status_code == 401:
         # Токен истёк или недействителен, пробуем получить новый
@@ -40,12 +44,18 @@ def bot_get_habits(message: Message) -> None:
         data = response.json()
         # Обработка успешного ответа
         if len(data) > 0:
-            bot.send_message(chat_id,
-                             "Список ваших привычек (с отметками о выполнении за сегодня):",
-                             reply_markup=habit_list_inline(data, "list"))
+            bot.send_message(
+                chat_id,
+                "Список ваших привычек (с отметками о выполнении за сегодня):",
+                reply_markup=habit_list_inline(data, "list"),
+            )
         else:
-            bot.send_message(chat_id,
-                             "Похоже, вы не создали ни одной привычки, самое время начать!",
-                             reply_markup=habit_list_inline(data, "list"))
+            bot.send_message(
+                chat_id,
+                "Похоже, вы не создали ни одной привычки, самое время начать!",
+                reply_markup=habit_list_inline(data, "list"),
+            )
     else:
-        bot.send_message(chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands())
+        bot.send_message(
+            chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands()
+        )

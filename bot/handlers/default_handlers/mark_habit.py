@@ -15,8 +15,8 @@ logger = logging.getLogger(__name__)
 def get_list_habits(chat_id, token):
     headers = {"Authorization": f"Bearer {token}"}
     response = requests.get(f"http://{API_HOST}:8000/habits", headers=headers)
-    logger.debug(f'Headers: {response.request.headers}')
-    logger.debug(f'Code: {response.status_code}')
+    logger.debug(f"Headers: {response.request.headers}")
+    logger.debug(f"Code: {response.status_code}")
 
     if response.status_code == 401:
         # Токен истёк или недействителен, пробуем получить новый
@@ -25,10 +25,15 @@ def get_list_habits(chat_id, token):
     if response.status_code == 200:
         data = response.json()
         # Обработка успешного ответа
-        bot.send_message(chat_id, "Список ваших привычек:",
-                         reply_markup=habit_list_inline(data, "list"))
+        bot.send_message(
+            chat_id,
+            "Список ваших привычек:",
+            reply_markup=habit_list_inline(data, "list"),
+        )
     else:
-        bot.send_message(chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands())
+        bot.send_message(
+            chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands()
+        )
 
 
 def get_unmarked_list_habits(chat_id, token):
@@ -42,42 +47,58 @@ def get_unmarked_list_habits(chat_id, token):
     if response.status_code == 200:
         data = response.json()
         # Обработка успешного ответа
-        bot.send_message(chat_id, "Список привычек без отметок о выполнении за сегодня:",
-                         reply_markup=habit_list_inline(data, "unmarkedlist"))
+        bot.send_message(
+            chat_id,
+            "Список привычек без отметок о выполнении за сегодня:",
+            reply_markup=habit_list_inline(data, "unmarkedlist"),
+        )
     else:
-        bot.send_message(chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands())
+        bot.send_message(
+            chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands()
+        )
 
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith('mark_'))
+@bot.callback_query_handler(func=lambda call: call.data.startswith("mark_"))
 def callback_mark_habit(call):
     chat_id = call.from_user.id
-    habit_id = int(call.data.split('_')[1])
-    type_answer = call.data.split('_')[2]
+    habit_id = int(call.data.split("_")[1])
+    type_answer = call.data.split("_")[2]
 
     with SessionLocal() as db:
         token = get_token_for_user(db, chat_id)
     if not token:
-        bot.send_message(chat_id, "Пожалуйста, авторизуйтесь через /start", reply_markup=habits_commands())
+        bot.send_message(
+            chat_id,
+            "Пожалуйста, авторизуйтесь через /start",
+            reply_markup=habits_commands(),
+        )
         return
 
     headers = {"Authorization": f"Bearer {token}"}
-    response = requests.post(f"http://{API_HOST}:8000/habits/{habit_id}/mark",
-                             headers=headers)
+    response = requests.post(
+        f"http://{API_HOST}:8000/habits/{habit_id}/mark", headers=headers
+    )
 
     if response.status_code == 401:
         # Токен истёк или недействителен, пробуем получить новый
         get_new_token(chat_id)
 
     if response.status_code == 200:
-        if type_answer == "one":  # если тип ответа one - надо вернуть пользователю информацию об одной привычке
+        if (
+            type_answer == "one"
+        ):  # если тип ответа one - надо вернуть пользователю информацию об одной привычке
             data = response.json()
 
             # Обработка успешного ответа
-            bot.send_message(chat_id,
-                             "Отметка о выполнении проставлена/снята",
-                             reply_markup=habit_fields_inline(data))
+            bot.send_message(
+                chat_id,
+                "Отметка о выполнении проставлена/снята",
+                reply_markup=habit_fields_inline(data),
+            )
 
-        elif type_answer == "list":  # если тип ответа list - надо вернуть пользователю список всех привычек
+        elif (
+            type_answer == "list"
+        ):  # если тип ответа list - надо вернуть пользователю список всех привычек
             get_list_habits(chat_id=chat_id, token=token)
 
         elif type_answer == "unmarkedlist":
@@ -85,4 +106,6 @@ def callback_mark_habit(call):
             get_unmarked_list_habits(chat_id=chat_id, token=token)
 
     else:
-        bot.send_message(chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands())
+        bot.send_message(
+            chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands()
+        )

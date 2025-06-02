@@ -24,11 +24,17 @@ def bot_get_statistics(message: Message):
     with SessionLocal() as db:
         token = get_token_for_user(db, chat_id)
     if not token:
-        bot.send_message(chat_id, "Пожалуйста, авторизуйтесь через /start", reply_markup=habits_commands())
+        bot.send_message(
+            chat_id,
+            "Пожалуйста, авторизуйтесь через /start",
+            reply_markup=habits_commands(),
+        )
         return
 
     headers = {"Authorization": f"Bearer {token}"}
-    response = requests.get(f"http://{API_HOST}:8000/habits/statistics", headers=headers)
+    response = requests.get(
+        f"http://{API_HOST}:8000/habits/statistics", headers=headers
+    )
 
     if response.status_code == 401:
         # Токен истёк или недействителен, пробуем получить новый
@@ -38,29 +44,44 @@ def bot_get_statistics(message: Message):
         data = response.json()
         # Обработка успешного ответа
         if len(data) > 0:
-            bot.send_message(chat_id, "Статистика за последнюю неделю:",
-                         reply_markup=statistics_habit_list_inline(data))
+            bot.send_message(
+                chat_id,
+                "Статистика за последнюю неделю:",
+                reply_markup=statistics_habit_list_inline(data),
+            )
         else:
-            bot.send_message(chat_id, "Похоже, вы не создали ни одной привычки. Самое время начать!", reply_markup=habits_commands())
+            bot.send_message(
+                chat_id,
+                "Похоже, вы не создали ни одной привычки. Самое время начать!",
+                reply_markup=habits_commands(),
+            )
 
     else:
-        bot.send_message(chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands())
+        bot.send_message(
+            chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands()
+        )
 
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith('habitstatistics_'))
+@bot.callback_query_handler(func=lambda call: call.data.startswith("habitstatistics_"))
 def handle_statistics_habit_callback(call):
     """Пользователь нажал на привычку в списке, возвращаем пользователю статистику за 21 день"""
-    habit_id = int(call.data.split('_')[1])
+    habit_id = int(call.data.split("_")[1])
 
     chat_id = call.from_user.id
     with SessionLocal() as db:
         token = get_token_for_user(db, chat_id)
     if not token:
-        bot.send_message(chat_id, "Пожалуйста, авторизуйтесь через /start", reply_markup=habits_commands())
+        bot.send_message(
+            chat_id,
+            "Пожалуйста, авторизуйтесь через /start",
+            reply_markup=habits_commands(),
+        )
         return
 
     headers = {"Authorization": f"Bearer {token}"}
-    response = requests.get(f"http://{API_HOST}:8000/habits/{habit_id}/statistics", headers=headers)
+    response = requests.get(
+        f"http://{API_HOST}:8000/habits/{habit_id}/statistics", headers=headers
+    )
 
     if response.status_code == 401:
         # Токен истёк или недействителен, пробуем получить новый
@@ -69,8 +90,14 @@ def handle_statistics_habit_callback(call):
     if response.status_code == 200:
         data = response.json()
         # Обработка успешного ответа
-        bot.send_message(chat_id, f"Статистика за 21 день - привычка {data['title']}", reply_markup=habits_commands())
+        bot.send_message(
+            chat_id,
+            f"Статистика за 21 день - привычка {data['title']}",
+            reply_markup=habits_commands(),
+        )
         bot.send_message(chat_id, f"{data['tracker']}", reply_markup=habits_commands())
 
     else:
-        bot.send_message(chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands())
+        bot.send_message(
+            chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands()
+        )

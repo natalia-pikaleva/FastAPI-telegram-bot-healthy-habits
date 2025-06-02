@@ -4,8 +4,14 @@ from database.db_init import get_db
 from database.models import User, Habit, HabitTracker, Reminder
 from sqlalchemy import select, and_, or_, not_
 from sqlalchemy.orm import Session, joinedload, aliased
-from .schemas import HabitResponse, HabitCreateRequest, HabitUpdateRequest, ReminderUpdateRequest, \
-    UnmarkedHabitResponse, HabitTrackerResponse
+from .schemas import (
+    HabitResponse,
+    HabitCreateRequest,
+    HabitUpdateRequest,
+    ReminderUpdateRequest,
+    UnmarkedHabitResponse,
+    HabitTrackerResponse,
+)
 from fastapi import Depends, APIRouter, status, HTTPException
 from config import setup_logging
 import logging
@@ -18,15 +24,14 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-repeat_period_for_read = {"daily": "Ежедневно",
-                          "weekly": "Еженедельно"}
+repeat_period_for_read = {"daily": "Ежедневно", "weekly": "Еженедельно"}
 
 
 @router.post("/create", response_model=HabitResponse)
 def create_habit(
-        habit: HabitCreateRequest,
-        current_user: User = Depends(get_current_user),
-        db: Session = Depends(get_db)
+    habit: HabitCreateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     logger.debug("Start create_habit")
     try:
@@ -35,7 +40,7 @@ def create_habit(
             repeat_period=habit.repeat_period,
             week_days=habit.week_days,
             start_at=habit.start_at,
-            user_id=current_user.id
+            user_id=current_user.id,
         )
         db.add(new_habit)
         db.commit()
@@ -52,29 +57,34 @@ def create_habit(
 
 @router.get("/unmarked", response_model=List[UnmarkedHabitResponse])
 def get_unmarked_habits_list(
-        db: Session = Depends(get_db),
-        current_user: Any = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    current_user: Any = Depends(get_current_user),
 ):
     try:
         day_index = date.today().weekday()
         # Выбираем привычки пользователя без отметок за сегодня, ежедневные или еженедельные,
         # у которых установлен текущий день недели
-        habits = (db.query(Habit)
-                  .filter(Habit.user_id == current_user.id,
-                          not_(Habit.id.in_(
-                              select(HabitTracker.habit_id)
-                              .where(HabitTracker.date_mark == date.today())
-                          )),
-                          or_(
-                              Habit.repeat_period == "daily",
-                              and_(Habit.repeat_period == "weekly",
-                                   Habit.week_days.any(day_index))
-                          )
-                          )
-                  .options(
-            joinedload(Habit.dates),
-            joinedload(Habit.reminder)
-        ).all())
+        habits = (
+            db.query(Habit)
+            .filter(
+                Habit.user_id == current_user.id,
+                not_(
+                    Habit.id.in_(
+                        select(HabitTracker.habit_id).where(
+                            HabitTracker.date_mark == date.today()
+                        )
+                    )
+                ),
+                or_(
+                    Habit.repeat_period == "daily",
+                    and_(
+                        Habit.repeat_period == "weekly", Habit.week_days.any(day_index)
+                    ),
+                ),
+            )
+            .options(joinedload(Habit.dates), joinedload(Habit.reminder))
+            .all()
+        )
 
         logger.error(f"habits: {habits}")
 
@@ -87,15 +97,19 @@ def get_unmarked_habits_list(
 
 @router.get("/statistics")
 def get_statistics_habit_list(
-        db: Session = Depends(get_db),
-        current_user: Any = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    current_user: Any = Depends(get_current_user),
 ):
     try:
         date_7_start = date.today() - datetime.timedelta(days=6)
         dates_week = [date_7_start + datetime.timedelta(days=i) for i in range(7)]
 
-        habits = (db.query(Habit).filter(Habit.user_id == current_user.id)
-                  .options(joinedload(Habit.dates)).all())
+        habits = (
+            db.query(Habit)
+            .filter(Habit.user_id == current_user.id)
+            .options(joinedload(Habit.dates))
+            .all()
+        )
 
         logger.error(f"habits: {habits}")
         response = []
@@ -104,10 +118,18 @@ def get_statistics_habit_list(
             data = defaultdict()
             data["id"] = habit.id
             data["title"] = habit.title
-            data["marked_days"] = [tracked.date_mark for tracked in habit.dates if tracked.date_mark > date_7_start]
+            data["marked_days"] = [
+                tracked.date_mark
+                for tracked in habit.dates
+                if tracked.date_mark > date_7_start
+            ]
 
-            data["week"] = ''.join(['✅' if tracked in set(data["marked_days"])
-                                    else '⚪️' for tracked in dates_week])
+            data["week"] = "".join(
+                [
+                    "✅" if tracked in set(data["marked_days"]) else "⚪️"
+                    for tracked in dates_week
+                ]
+            )
 
             response.append(data)
 
@@ -120,20 +142,30 @@ def get_statistics_habit_list(
 
 @router.get("/{habit_id}/statistics")
 def get_statistics_by_habit_id(
-        habit_id: int,
-        db: Session = Depends(get_db),
-        current_user: Any = Depends(get_current_user),
+    habit_id: int,
+    db: Session = Depends(get_db),
+    current_user: Any = Depends(get_current_user),
 ):
     try:
         date_21_start = date.today() - datetime.timedelta(days=20)
         dates_week = [date_21_start + datetime.timedelta(days=i) for i in range(21)]
 
-        habit = (db.query(Habit).filter(Habit.id == habit_id)
-                 .options(joinedload(Habit.dates)).scalar())
+        habit = (
+            db.query(Habit)
+            .filter(Habit.id == habit_id)
+            .options(joinedload(Habit.dates))
+            .scalar()
+        )
 
-        result = {'title': habit.title}
-        marked_days = [tracked.date_mark for tracked in habit.dates if tracked.date_mark > date_21_start]
-        result['tracker'] = ''.join(['✅' if tracked in set(marked_days) else '⚪️' for tracked in dates_week])
+        result = {"title": habit.title}
+        marked_days = [
+            tracked.date_mark
+            for tracked in habit.dates
+            if tracked.date_mark > date_21_start
+        ]
+        result["tracker"] = "".join(
+            ["✅" if tracked in set(marked_days) else "⚪️" for tracked in dates_week]
+        )
 
         return result
 
@@ -144,11 +176,10 @@ def get_statistics_by_habit_id(
 
 @router.post("/{habit_id}/update", response_model=HabitResponse)
 def update_habit(
-        habit: HabitUpdateRequest,
-        habit_id: int,
-        db: Session = Depends(get_db),
-        current_user: User = Depends(get_current_user),
-
+    habit: HabitUpdateRequest,
+    habit_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     logger.debug("Start update_habit")
     db_habit = db.query(Habit).filter(Habit.id == habit_id).scalar()
@@ -172,10 +203,9 @@ def update_habit(
 
 @router.delete("/{habit_id}/delete", status_code=status.HTTP_200_OK)
 def delete_habit(
-        habit_id: int,
-        current_user: User = Depends(get_current_user),
-        db: Session = Depends(get_db),
-
+    habit_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     logger.debug("Start delete_habit")
     habit = db.query(Habit).filter(Habit.id == habit_id).scalar()
@@ -187,15 +217,19 @@ def delete_habit(
 
 @router.post("/{habit_id}/mark", response_model=HabitResponse)
 def set_mark_on_habit(
-        habit_id: int,
-        db: Session = Depends(get_db),
-        current_user: User = Depends(get_current_user),
-
+    habit_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     habit = db.query(Habit).filter(Habit.id == habit_id).first()
     response = HabitResponse.from_orm(habit)
-    today_habit_mark = db.query(HabitTracker).filter(HabitTracker.habit_id == habit_id,
-                                                     HabitTracker.date_mark == date.today()).first()
+    today_habit_mark = (
+        db.query(HabitTracker)
+        .filter(
+            HabitTracker.habit_id == habit_id, HabitTracker.date_mark == date.today()
+        )
+        .first()
+    )
 
     if today_habit_mark:
         # Отметка за сегодня уже сделана, пользователь хочет убрать отметку
@@ -205,10 +239,7 @@ def set_mark_on_habit(
         return response
 
     # Отметки за сегодня еще нет, ставим
-    today_habit_mark = HabitTracker(
-        habit_id=habit_id,
-        date_mark=date.today()
-    )
+    today_habit_mark = HabitTracker(habit_id=habit_id, date_mark=date.today())
     db.add(today_habit_mark)
     db.commit()
 
@@ -219,15 +250,17 @@ def set_mark_on_habit(
 
 @router.post("/{habit_id}/set_reminder", status_code=status.HTTP_200_OK)
 def set_reminder(
-        habit_id: int,
-        reminder: ReminderUpdateRequest,
-        db: Session = Depends(get_db),
-        current_user: User = Depends(get_current_user),
-
+    habit_id: int,
+    reminder: ReminderUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     logger.debug(f"Start set_reminder with {reminder}")
-    db_reminder = db.query(Reminder).filter(Reminder.chat_id == reminder.chat_id,
-                                            Reminder.habit_id == habit_id).first()
+    db_reminder = (
+        db.query(Reminder)
+        .filter(Reminder.chat_id == reminder.chat_id, Reminder.habit_id == habit_id)
+        .first()
+    )
 
     logger.debug(f"Reminder from db: {db_reminder}")
 
@@ -252,14 +285,16 @@ def set_reminder(
 
 @router.get("/{habit_id}", response_model=HabitResponse)
 def get_habit(
-        habit_id: int,
-        db: Session = Depends(get_db),
-        current_user: Any = Depends(get_current_user),
+    habit_id: int,
+    db: Session = Depends(get_db),
+    current_user: Any = Depends(get_current_user),
 ):
     habit = db.query(Habit).filter(Habit.id == habit_id).first()
     today_mark = (
         db.query(HabitTracker)
-        .filter(HabitTracker.habit_id == habit_id, HabitTracker.date_mark == date.today())
+        .filter(
+            HabitTracker.habit_id == habit_id, HabitTracker.date_mark == date.today()
+        )
         .first()
     )
     response = HabitResponse.from_orm(habit)
@@ -275,8 +310,8 @@ def get_habit(
 
 @router.get("", response_model=List[HabitResponse])
 def get_habits_list(
-        db: Session = Depends(get_db),
-        current_user: Any = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    current_user: Any = Depends(get_current_user),
 ):
     today = date.today()
     today_tracker = aliased(HabitTracker)
@@ -284,10 +319,7 @@ def get_habits_list(
         db.query(Habit, today_tracker)
         .outerjoin(
             today_tracker,
-            and_(
-                Habit.id == today_tracker.habit_id,
-                today_tracker.date_mark == today
-            )
+            and_(Habit.id == today_tracker.habit_id, today_tracker.date_mark == today),
         )
         .filter(Habit.user_id == current_user.id)
     )

@@ -24,7 +24,11 @@ def bot_get_unmarked_habits(message: Message) -> None:
     with SessionLocal() as db:
         token = get_token_for_user(db, chat_id)
     if not token:
-        bot.send_message(chat_id, "Пожалуйста, авторизуйтесь через /start", reply_markup=habits_commands())
+        bot.send_message(
+            chat_id,
+            "Пожалуйста, авторизуйтесь через /start",
+            reply_markup=habits_commands(),
+        )
         return
 
     headers = {"Authorization": f"Bearer {token}"}
@@ -38,10 +42,19 @@ def bot_get_unmarked_habits(message: Message) -> None:
         data = response.json()
         # Обработка успешного ответа
         if len(data) == 0:
-            bot.send_message(chat_id, "За сегодня все привычки выполнены! Так держать!", reply_markup=habits_commands())
+            bot.send_message(
+                chat_id,
+                "За сегодня все привычки выполнены! Так держать!",
+                reply_markup=habits_commands(),
+            )
 
         else:
-            bot.send_message(chat_id, "Список привычек без отметок о выполнении за сегодня:",
-                             reply_markup=habit_list_inline(data, "unmarkedlist"))
+            bot.send_message(
+                chat_id,
+                "Список привычек без отметок о выполнении за сегодня:",
+                reply_markup=habit_list_inline(data, "unmarkedlist"),
+            )
     else:
-        bot.send_message(chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands())
+        bot.send_message(
+            chat_id, "Ошибка при выполнении запроса.", reply_markup=habits_commands()
+        )

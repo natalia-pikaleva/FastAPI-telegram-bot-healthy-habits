@@ -23,21 +23,25 @@ def bot_start(message: Message) -> None:
         user = get_user_by_chat_id(db, chat_id)
         if not user:
             response = requests.post(
-                f"http://{API_HOST}:8000/auth/login",
-                json={"telegram_id": chat_id}
+                f"http://{API_HOST}:8000/auth/login", json={"telegram_id": chat_id}
             )
             if response.status_code == 200:
                 token = response.json().get("access_token")
-                bot.send_message(chat_id=chat_id,
-                                 text="Вы успешно авторизованы!",
-                                 reply_markup=habits_commands())
+                bot.send_message(
+                    chat_id=chat_id,
+                    text="Вы успешно авторизованы!",
+                    reply_markup=habits_commands(),
+                )
             else:
-                bot.send_message(chat_id=chat_id,
-                                 text="Ошибка аутентификации. Попробуйте позже.",
-                                 reply_markup=habits_commands())
+                bot.send_message(
+                    chat_id=chat_id,
+                    text="Ошибка аутентификации. Попробуйте позже.",
+                    reply_markup=habits_commands(),
+                )
         else:
             bot.send_message(
                 chat_id=chat_id,
                 text="Прекрасный день, чтобы начать формировать новую привычку! "
-                     "Нажми Создать новую привычку или выбери привычку из ранее созданного списка",
-                reply_markup=habits_commands())
+                "Нажми Создать новую привычку или выбери привычку из ранее созданного списка",
+                reply_markup=habits_commands(),
+            )
