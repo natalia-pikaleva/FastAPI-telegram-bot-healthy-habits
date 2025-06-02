@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from config import setup_logging
 from sqlalchemy.exc import SQLAlchemyError
 
-from .models import Base, User, UserToken, Habit
+from database.models import User, UserToken, Habit
 import logging
 
 setup_logging()

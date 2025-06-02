@@ -3,8 +3,8 @@ from database.db_utils import save_token_for_user
 from database.models import User, UserToken
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from .schemas import AuthRequest, TokenResponse
-from .utils import create_access_token
+from routers.auth.schemas import AuthRequest, TokenResponse
+from routers.auth.utils import create_access_token
 from fastapi import Depends, APIRouter
 from config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 from config import setup_logging
@@ -23,9 +23,9 @@ def auth(auth_req: AuthRequest, db: Session = Depends(get_db)):
     logger.debug("Start router auth")
     user = db.execute(
         select(User).where(User.telegram_id == auth_req.telegram_id)
-    ).scalar_one_or_none()
+    ).scalars().one_or_none()
 
-    if not user:
+    if user is None:
         logger.debug("User is None, start create User")
         user = User(telegram_id=auth_req.telegram_id)
         try:
@@ -37,7 +37,7 @@ def auth(auth_req: AuthRequest, db: Session = Depends(get_db)):
             logger.error(f"Error creating user: {e}")
             raise
 
-    old_token = db.execute(select(UserToken).filter(UserToken.user_id == user.id)).scalar_one_or_none()
+    old_token = db.execute(select(UserToken).filter(UserToken.user_id == user.id)).scalars().first()
 
     if old_token:
         logger.debug("Delete okd token")

@@ -1,6 +1,6 @@
-from ...keyboards.reply.core import habits_commands
+from bot.keyboards.reply.core import habits_commands
 from telebot.types import Message
-from ...setup import bot
+from bot.setup import bot
 from config import setup_logging
 import logging
 

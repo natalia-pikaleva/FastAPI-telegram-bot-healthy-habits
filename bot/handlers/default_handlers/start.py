@@ -1,5 +1,5 @@
 from telebot.types import Message
-from ...setup import bot
+from bot.setup import bot
 from database.db_init import SessionLocal
 from database.db_utils import get_user_by_chat_id
 import requests

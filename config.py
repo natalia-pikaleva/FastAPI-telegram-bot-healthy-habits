@@ -4,7 +4,10 @@ import logging
 import logging.config
 import redis
 
-load_dotenv()
+if not find_dotenv():
+    exit("Переменные окружения не загружены т.к отсутствует файл .env")
+else:
+    load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
@@ -15,11 +18,6 @@ DB_NAME = os.getenv("DB_NAME", )
 API_HOST = os.getenv("API_HOST", "127.0.0.1")
 DB_HOST = os.getenv("DB_HOST", "127.0.0.1")
 REDIS_HOST = os.getenv("REDIS_HOST", "127.0.0.1")
-
-if not find_dotenv():
-    exit("Переменные окружения не загружены т.к отсутствует файл .env")
-else:
-    load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 

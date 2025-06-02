@@ -18,6 +18,9 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+repeat_period_for_read = {"daily": "Ежедневно",
+                          "weekly": "Еженедельно"}
+
 
 @router.post("/create", response_model=HabitResponse)
 def create_habit(
@@ -41,14 +44,11 @@ def create_habit(
         response = HabitResponse.from_orm(new_habit)
         response.today_mark = None
         response.reminder_time = None
-
-        if response.repeat_period == "daily":
-            response.repeat_period = "Ежедневно"
-        else:
-            response.repeat_period = "Еженедельно"
+        response.repeat_period = repeat_period_for_read[response.repeat_period]
         return response
     except Exception as e:
         logger.error("error during create habit %s", e)
+
 
 @router.get("/unmarked", response_model=List[UnmarkedHabitResponse])
 def get_unmarked_habits_list(
@@ -57,7 +57,6 @@ def get_unmarked_habits_list(
 ):
     try:
         day_index = date.today().weekday()
-
         # Выбираем привычки пользователя без отметок за сегодня, ежедневные или еженедельные,
         # у которых установлен текущий день недели
         habits = (db.query(Habit)
@@ -166,10 +165,7 @@ def update_habit(
     db.refresh(db_habit)
 
     response = HabitResponse.from_orm(db_habit)
-    if response.repeat_period == "daily":
-        response.repeat_period = "Ежедневно"
-    else:
-        response.repeat_period = "Еженедельно"
+    response.repeat_period = repeat_period_for_read[response.repeat_period]
 
     return response
 
@@ -205,10 +201,7 @@ def set_mark_on_habit(
         # Отметка за сегодня уже сделана, пользователь хочет убрать отметку
         db.delete(today_habit_mark)
         db.commit()
-        if response.repeat_period == "daily":
-            response.repeat_period = "Ежедневно"
-        else:
-            response.repeat_period = "Еженедельно"
+        response.repeat_period = repeat_period_for_read[response.repeat_period]
         return response
 
     # Отметки за сегодня еще нет, ставим
@@ -219,11 +212,7 @@ def set_mark_on_habit(
     db.add(today_habit_mark)
     db.commit()
 
-    if response.repeat_period == "daily":
-        response.repeat_period = "Ежедневно"
-    else:
-        response.repeat_period = "Еженедельно"
-
+    response.repeat_period = repeat_period_for_read[response.repeat_period]
     response.today_mark = date.today()
     return response
 
@@ -274,10 +263,7 @@ def get_habit(
         .first()
     )
     response = HabitResponse.from_orm(habit)
-    if response.repeat_period == "daily":
-        response.repeat_period = "Ежедневно"
-    else:
-        response.repeat_period = "Еженедельно"
+    response.repeat_period = repeat_period_for_read[response.repeat_period]
 
     response.today_mark = today_mark
     reminder = db.query(Reminder).filter(Reminder.habit_id == habit.id).first()
@@ -292,10 +278,8 @@ def get_habits_list(
         db: Session = Depends(get_db),
         current_user: Any = Depends(get_current_user),
 ):
-
     today = date.today()
     today_tracker = aliased(HabitTracker)
-
     query = (
         db.query(Habit, today_tracker)
         .outerjoin(
@@ -307,18 +291,15 @@ def get_habits_list(
         )
         .filter(Habit.user_id == current_user.id)
     )
-
     results = query.all()
 
     habit_responses = []
     for habit, today_mark in results:
         habit_response = HabitResponse.from_orm(habit)
-
         if today_mark:
             habit_response.today_mark = HabitTrackerResponse.from_orm(today_mark)
         else:
             habit_response.today_mark = None
-
         habit_responses.append(habit_response)
 
     return habit_responses
